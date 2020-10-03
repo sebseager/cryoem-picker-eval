@@ -87,13 +87,15 @@ class Apple:
                         self.tau1, self.tau2, self.minimum_overlap_amount, self.container_size, filepath,
                         self.output_dir)
 
+        print("PROCESSING: %s" % str(filepath))  # SJHS
+
         logger.info('Computing scores for query images')
         score = picker.query_score(show_progress=show_progress)  # compute score using normalized cross-correlations
 
         while True:
             logger.info(f'Running svm with tau1={picker.tau1}, tau2={picker.tau2}')
             # train SVM classifier and classify all windows in micrograph
-            segmentation = picker.run_svm(score)
+            segmentation, segmentation_proba = picker.run_svm(score)  # SJHS
 
             # If all windows are classified identically, update tau_1 or tau_2
             if np.all(segmentation):
@@ -107,7 +109,7 @@ class Apple:
         segmentation = picker.morphology_ops(segmentation)
 
         logger.info('Getting particle centers')
-        centers = picker.extract_particles(segmentation)
+        centers = picker.extract_particles(segmentation, segmentation_proba)  # SJHS
 
         particle_image = None
         if create_jpg and self.output_dir is not None:

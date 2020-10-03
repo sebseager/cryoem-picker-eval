@@ -11,6 +11,8 @@ from scipy.ndimage import binary_fill_holes, binary_erosion, binary_dilation, ce
 from PIL import Image
 from sklearn import svm, preprocessing
 
+from sklearn.calibration import CalibratedClassifierCV  # SJHS
+
 from aspire import config
 from aspire.apple.helper import PickerHelper
 from aspire.utils.numeric import xp
@@ -188,8 +190,12 @@ class Picker:
         scaler = preprocessing.StandardScaler()
         scaler.fit(x)
         x = scaler.transform(x)
+
         classifier = self.model
         classifier.fit(x, y)
+
+        classifier_proba = CalibratedClassifierCV(self.model, method='sigmoid', cv=None)  # SJHS
+        classifier_proba.fit(x, y)  # SJHS
 
         mean_all, std_all = PickerHelper.moments(micro_img, self.query_size)
         mean_all = xp.asnumpy(mean_all)
@@ -208,11 +214,14 @@ class Picker:
 
         # compute classification for all possible windows in micrograph
         segmentation = classifier.predict(cls_input)
+        segmentation_proba = classifier_proba.predict_proba(cls_input)[:,1]  # SJHS
 
         _segmentation_shape = int(np.sqrt(segmentation.shape[0]))
         segmentation = np.reshape(segmentation, (_segmentation_shape, _segmentation_shape), 'F')
 
-        return segmentation.copy()
+        segmentation_proba = np.reshape(segmentation_proba, (_segmentation_shape, _segmentation_shape), 'F')  # SJHS
+
+        return segmentation.copy(), segmentation_proba.copy()  # SJHS
 
     def morphology_ops(self, segmentation):
         """
@@ -257,7 +266,7 @@ class Picker:
 
         return segmentation_e
 
-    def extract_particles(self, segmentation):
+    def extract_particles(self, segmentation, segmentation_proba):  # SJHS
         """
         Saves particle centers into output .star file, after dismissing regions
         that are too big to contain a particle.
@@ -267,6 +276,9 @@ class Picker:
         """
         segmentation = segmentation[self.query_size // 2 - 1:-self.query_size // 2,
                                     self.query_size // 2 - 1:-self.query_size // 2]
+        segmentation_proba = segmentation_proba[self.query_size // 2 - 1:-self.query_size // 2,
+                                                self.query_size // 2 - 1:-self.query_size // 2]  # SJHS
+
         labeled_segments, _ = ndimage.label(segmentation, np.ones((3, 3)))
         values, repeats = np.unique(labeled_segments, return_counts=True)
 
@@ -290,6 +302,13 @@ class Picker:
         center = center_of_mass(segmentation, labeled_segments, np.arange(1, max_val))
         center = np.rint(center)
 
+        if len(center) == 0:  # SJHS
+            print("*** EMPTY CENTERS. SKIPPING THIS MICROGRAPH. ***")  # SJHS
+            return []  # SJHS
+
+        probas = [[segmentation_proba[(int(y), int(x))]] for (y, x) in center]  # SJHS
+        center = np.hstack((center, probas))  # SJHS
+
         img = np.zeros((segmentation.shape[0], segmentation.shape[1]))
         img[center[:, 0].astype(int), center[:, 1].astype(int)] = 1
         y, x = np.ogrid[-self.moa:self.moa+1, -self.moa:self.moa+1]
@@ -304,14 +323,14 @@ class Picker:
         y -= 1
         center = center[y, :]
 
-        center = center + (self.query_size // 2 - 1) * np.ones(center.shape)
-        center = center + (self.query_size // 2 - 1) * np.ones(center.shape)
-        center = center + np.ones(center.shape)
+        center[:, [0, 1]] = center[:, [0, 1]] + (self.query_size // 2 - 1) * np.ones(center[:, [0, 1]].shape)  # SJHS
+        center[:, [0, 1]] = center[:, [0, 1]] + (self.query_size // 2 - 1) * np.ones(center[:, [0, 1]].shape)  # SJHS
+        center[:, [0, 1]] = center[:, [0, 1]] + np.ones(center[:, [0, 1]].shape)  # SJHS
 
-        center = config.apple.mrc_shrink_factor * center
+        center[:, [0, 1]] = config.apple.mrc_shrink_factor * center[:, [0, 1]]  # SJHS
 
         # swap columns to align with Relion
-        center = center[:, [1, 0]]
+        center[:, [0, 1]] = center[:, [1, 0]]  # SJHS
 
         # first column is x; second column is y - offset by margins that were discarded from the image
         center[:, 0] += config.apple.mrc_margin_left
@@ -322,9 +341,14 @@ class Picker:
             name_str, ext = os.path.splitext(basename)
 
             applepick_path = os.path.join(self.output_directory, "{}_applepick.star".format(name_str))
+            applepick_path_coord = os.path.join(self.output_directory, "{}_applepick.coord".format(name_str))  # SJHS
+
             with open(applepick_path, "w") as f:
                 np.savetxt(f, ["data_root\n\nloop_\n_rlnCoordinateX #1\n_rlnCoordinateY #2"], fmt='%s')
-                np.savetxt(f, center, fmt='%d %d')
+                np.savetxt(f, center[:, [0, 1]], fmt='%d %d')  # SJHS
+
+            with open(applepick_path_coord, "w") as f:  # SJHS
+                np.savetxt(f, center, fmt='%d %d %f')  # SJHS
 
         return center
 

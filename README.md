@@ -15,7 +15,7 @@ general structure from now on.
 
 ```text
 pickers/
-├── cryo-docs/    <-- this repo
+├── cryo-docs/      <-- this repo
 │   ├── guides/
 │   ├── patches/
 │   └── etc.
@@ -25,7 +25,7 @@ pickers/
 ```
 
 First, clone this repo into its own directory, as per the above structure. **All installation guides will begin by 
-assuming that your current working directory is `pickers/` and that this repo is available at `./cryo-docs/`.**
+assuming that your current working directory is** `pickers/` **and that this repo is available at** `./cryo-docs/`.
 
 ```shell script
 mkdir -p /path/to/pickers/directory

@@ -60,7 +60,11 @@ class PickerHelper:
         """
 
         # keep only the portion of the image that can be split into blocks with no remainder
-        blocks = xp.asarray(img[:-(img.shape[0] % block_size), :-(img.shape[1] % block_size)])
+        img_end_slice_0 = slice(
+            None, -(img.shape[0] % block_size)) if img.shape[0] % block_size != 0 else slice(None, None)  # SJHS
+        img_end_slice_1 = slice(
+            None, -(img.shape[1] % block_size)) if img.shape[1] % block_size != 0 else slice(None, None)  # SJHS
+        blocks = xp.asarray(img[img_end_slice_0, img_end_slice_1])  # SJHS
 
         dim3_size = np.sqrt(np.prod(blocks.shape) // (block_size ** 2)).astype(int)
         blocks = xp.reshape(blocks, (block_size, dim3_size, block_size,  dim3_size), 'F')
