@@ -14,7 +14,7 @@ document refers only to APPLEpicker as included in the ASPIRE-Python project.
 The APPLEpicker paper can be found [here](https://doi.org/10.1016/j.jsb.2018.08.012). Refer also to the ASPIRE 
 [wiki](https://computationalcryoem.github.io/ASPIRE-Python/) for more information.
 
-## ASPIRE Installation
+## Installation
 
 *Note: modified from https://github.com/ComputationalCryoEM/ASPIRE-Python/blob/master/README.md*
 

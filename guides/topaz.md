@@ -9,7 +9,7 @@ Refer also to the [GitHub repo](https://github.com/tbepler/topaz), the
 [web-based GUI](https://emgweb.nysbc.org/topaz.html) for generating Topaz commands, and the 
 [tutorials](https://github.com/tbepler/topaz/tree/master/tutorial) included in the Topaz repo for more information.
 
-## Topaz Installation
+## Installation
 
 *Note: modified from https://github.com/tbepler/topaz/blob/master/README.md*
 

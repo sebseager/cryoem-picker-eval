@@ -2,26 +2,28 @@
 
 ## Summary
 
-crYOLO is available for download as a Python package from PyPi.
+crYOLO is available as a Python package from PyPI.
 
 The crYOLO paper can be found [here](https://doi.org/10.1038/s42003-019-0437-z). 
 Refer also to the [wiki](https://sphire.mpg.de/wiki/doku.php?id=pipeline:window:cryolo) (potentially outdated) and 
-[readthedocs user guide](https://cryolo.readthedocs.io/en/latest/) for more information.
+the [readthedocs user guide](https://cryolo.readthedocs.io/en/latest/) for more information.
 
-## crYOLO Installation
+## Installation
 
 *Note: modified from https://cryolo.readthedocs.io/en/latest/installation.html*
 
 Create and activate a new conda environment with the required dependencies. It is possible to use 
-`conda activate cryolo` instead of `source activate cryolo` for conda versions ≥ 4.4.
+`conda activate cryolo` instead of `source activate cryolo` for Anaconda versions ≥ 4.4.
 
 ```shell script
 conda create -n cryolo -c conda-forge -c anaconda python=3.6 pyqt=5 cudnn=7.1.2 numpy==1.14.5 cython wxPython==4.0.4 intel-openmp==2019.4
 source activate cryolo
 ```
 
-Verify that `which pip` points to an executable inside the `bin/` directory of your conda installation, and that 
-`which python` points to an executable inside your `conda_envs/bin` directory.
+Since crYOLO is available through PyPI, it can be installed using the package manager `pip`. In doing so, however, it 
+is important that we use the `pip` and `python` executables located in the conda environment created above. 
+To verify this, check that running `which pip` outputs something like `/path/to/conda_envs/cryolo/bin/pip`, and 
+that `which python` outputs something like `conda_envs/cryolo/bin/python`.
 
 To install crYOLO with GPU support (recommended, if you have a GPU available), run 
 
@@ -57,3 +59,7 @@ Negative stain:
 ```shell script
 wget ftp://ftp.gwdg.de/pub/misc/sphire/crYOLO-GENERAL-MODELS/gmodel_phosnet_negstain_20190226.h5
 ```
+
+## Usage
+
+
