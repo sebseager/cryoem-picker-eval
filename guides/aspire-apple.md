@@ -11,11 +11,12 @@ The standalone version(s) seem to have been deprecated, according to one of the 
 [here](https://github.com/PrincetonUniversity/APPLEpicker/issues/1#issuecomment-525574243). Therefore, the following 
 document refers only to APPLEpicker as included in the ASPIRE-Python project.
 
-The APPLEpicker paper can be found [here](https://doi.org/10.1016/j.jsb.2018.08.012). 
-Refer to the ASPIRE [README.md](https://github.com/ComputationalCryoEM/ASPIRE-Python/blob/master/README.md) and 
+The APPLEpicker paper can be found [here](https://doi.org/10.1016/j.jsb.2018.08.012). Refer also to the ASPIRE 
 [wiki](https://computationalcryoem.github.io/ASPIRE-Python/) for more information.
 
 ## ASPIRE Installation
+
+*Note: modified from https://github.com/ComputationalCryoEM/ASPIRE-Python/blob/master/README.md*
 
 ASPIRE must be installed into its own conda environment. It can be obtained either as a pip-installable package or via 
 its git repository. Because this guide includes several patches, it will follow the latter method.
@@ -23,7 +24,6 @@ its git repository. Because this guide includes several patches, it will follow 
 First, clone the ASPIRE repo using 
 
 ```shell script
-cd /path/to/contain/ASPIRE/clone
 git clone https://github.com/ComputationalCryoEM/ASPIRE-Python.git
 ```
 
