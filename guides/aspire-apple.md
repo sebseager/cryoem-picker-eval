@@ -43,7 +43,7 @@ conda env create -f environment.yml
 conda activate aspire
 ```
 
-The ASPIRE README then recommends running the provided unit tests using
+The ASPIRE README recommends running their provided unit tests using
 
 ```shell script
 cd /path/to/ASPIRE/clone
@@ -57,4 +57,10 @@ cd /path/to/ASPIRE/clone
 PYTHONPATH=./src pytest tests
 ```
 
-If unit tests pass, 
+If unit tests pass, install ASPIRE to the active conda environment (make sure you run `conda activate aspire` if you 
+have not already done so).
+
+```shell script
+cd /path/to/ASPIRE/clone
+python setup.py install
+```
