@@ -4,17 +4,15 @@
 
 crYOLO is available as a Python package from PyPI.
 
-The crYOLO paper can be found [here](https://doi.org/10.1038/s42003-019-0437-z). Refer also to the [wiki](https://sphire.mpg.de/wiki/doku.php?id=pipeline:window:cryolo) (potentially outdated) and the [readthedocs user guide](https://cryolo.readthedocs.io/en/latest/) for more information.
+The crYOLO paper can be found [here](https://doi.org/10.1038/s42003-019-0437-z). Refer also to the [wiki](https://sphire.mpg.de/wiki/doku.php?id=pipeline:window:cryolo) (potentially outdated) and the [readthedocs user guide](https://cryolo.readthedocs.io/en/latest/) for more information. The following guide is drawn in part from these resources.
 
 ## Installation
 
-*Note: modified from https://cryolo.readthedocs.io/en/latest/installation.html*
-
-Create and activate a new conda environment with the required dependencies. It is possible to use `conda activate cryolo` instead of `source activate cryolo` for Anaconda versions ≥ 4.4.
+Create and activate a new conda environment with the required dependencies.
 
 ```shell script
 conda create -n cryolo -c conda-forge -c anaconda python=3.6 pyqt=5 cudnn=7.1.2 numpy==1.14.5 cython wxPython==4.0.4 intel-openmp==2019.4
-source activate cryolo
+conda activate cryolo
 ```
 
 Since crYOLO is available through PyPI, it can be installed using the package manager `pip`. In doing so, however, it is important that we use the `pip` and `python` executables located in the conda environment created above. To verify this, check that running `which pip` outputs something like `/path/to/conda_envs/cryolo/bin/pip`, and that `which python` outputs something like `conda_envs/cryolo/bin/python`.
@@ -30,6 +28,8 @@ or, to install crYOLO with CPU support only, run
 ```shell script
 pip install 'cryolo[cpu]'
 ```
+
+### General models
 
 crYOLO provides three general models, each of which has been trained on a variety of data sets. They are available in [this section](https://cryolo.readthedocs.io/en/latest/installation.html#download-the-general-models) of the user guide. The following commands can also be used to download the most current versions (as of October 1, 2020) to your current working directory.
 
@@ -53,14 +53,28 @@ wget ftp://ftp.gwdg.de/pub/misc/sphire/crYOLO-GENERAL-MODELS/gmodel_phosnet_negs
 
 ## Usage
 
+### Overview
+
+Inputs
+- micrographs for which to pick particles
+- particle box size and other configurable parameters
+- manually picked particle coordinate files for training set (optional)
+- general model `*.h5` file (optional unless using JANNI denoising or performing model training)
+
+Outputs
+- directory containing `*.box` coordinate files
+- directory containing `*.star` coordinate files
+- directory containing `*.cbox` coordinate files
+- directory containing confidence distributions and other statistical data
+
 ### Setup
 
-Start by collecting the micrograph files (`*.mrc`) to be picked in a directory (assuming they are not already in their own directory). If you would like to use an existing public data set, [our guide to the EMPIAR database](empiar.md) may be helpful.
+Start by collecting the micrograph files (`*.mrc`) to be picked in a directory (assuming they are not already available in their own directory). If you would like to use an existing public data set, [our guide to the EMPIAR database](empiar.md) may be helpful.
 
 ```shell script
 cd /path/to/dataset
 mkdir mrc
-mv path/to/mrc_files/*.mrc mrc/
+mv path/to/your_mrc_files/*.mrc mrc/
 ```
 
 Create another directory, in which crYOLO configurations, temporary files, and predicted coordinates will be saved.
@@ -191,7 +205,7 @@ You might also consider adding the `--cleanup` flag, which deletes filtered imag
 
 ### Picking
 
-To pick particles (not filaments) using either one of the general models (if following configuration/training method 1) or a model you refined or trained in the previous section, run the following:
+To pick particles (not filaments) for every micrograph in `mrc/` using either one of the general models (if following configuration/training method 1) or a model you refined or trained in the previous section, run the following:
 
 ```shell script
 cryolo_predict.py -c cryolo_output/cryolo_config.json -w path/to/model.h5 -i mrc/ -g 0 -o cryolo_output/ -t 0.3
@@ -205,4 +219,4 @@ If picking filaments, the following command can be used:
 cryolo_predict.py -c cryolo_output/cryolo_config.json -w path/to/model.h5 -i mrc/ -g 0 -o cryolo_output/ -t 0.3 --filament -fw 100 -bd 20 -mn 6
 ```
 
-where the `-fw` indicates filament width in pixels, `-bd` indicates the distance adjacent boxes on the filament, and `-mn` indicates the smallest number of boxes that are allowed to constitute a filament.
+where the `-fw` indicates filament width in pixels, `-bd` indicates the distance between adjacent boxes on the filament, and `-mn` indicates the smallest number of boxes that are allowed to constitute a filament.
