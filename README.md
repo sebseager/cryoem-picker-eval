@@ -4,6 +4,8 @@ Hello!
 
 This repository (repo) contains installation guides, procedures, and patches for cryo-EM particle pickers, as followed during our experimentation for [TODO: FILL PAPER CITATION].
 
+These guides are primarily written for use on Linux systems; it may be possible to adapt some procedures to other *NIX systems like macOS with relatively minor changes, but we have not tested these use cases. Installations on Windows will likely be more complicated, and may require various supplementary procedures or compatibility layers.
+
 We recommend something like the following directory hierarchy for ease of housekeeping, and will assume this general structure from now on.
 
 ```text
@@ -28,7 +30,7 @@ Replace `/path/to/main` with the appropriate path in which to install particle p
 ```shell script
 mkdir -p /path/to/main
 cd /path/to/main
-git clone https://github.com/seb-seager/cryo-docs.git
+git clone --depth 1 https://github.com/seb-seager/cryo-docs.git
 ```
 
 To get started, take a look at our particle picker [usage guides](guides).
