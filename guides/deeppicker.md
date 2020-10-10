@@ -2,7 +2,7 @@
 
 ## Summary
 
-DeepPicker is available as a [GitHub repo](https://github.com/nejyeah/DeepPicker-python).
+DeepPicker is available as a [GitHub repo](https://github.com/nejyeah/DeepPicker-python). We used Python 3.6 for this installation.
 
 The DeepPicker paper can be found [here](https://arxiv.org/abs/1605.01838). Refer also to the [README](https://github.com/nejyeah/DeepPicker-python/blob/master/README.md) for more information. The following guide is drawn in part from these resources.
 
@@ -13,6 +13,12 @@ We have tested DeepPicker successfully on RHEL (Red Hat Enterprise Linux) 7.7. A
 > it only supports Ubuntu 12.0+, centOS 7.0+, and RHEL 7.0+
 
 ## Installation [TODO: TEST THIS SECTION]
+
+First, clone the ASPIRE repo into `pickers/deeppicker/` using 
+
+```shell script
+git clone https://github.com/nejyeah/DeepPicker-python.git pickers/deeppicker
+```
 
 Create and activate a new conda environment using Python version 3.6 (since `tensorflow` versions 1.12.0 and earlier do not support Python 3.7).
 
@@ -37,4 +43,4 @@ conda install tensorflow-gpu=#.##.##
 
 Note that `conda search tensorflow-gpu` can be used to see which versions of `tensorflow-gpu` are available with conda. If the version you would like to install is not available in your conda channels, you can either specify a different channel or install everything manually with `pip`—see [release history](https://pypi.org/project/tensorflow-gpu/#history) for `tensorflow-gpu`.
 
-## Usage
+## Usage [TODO: FINISH THIS SECTION]

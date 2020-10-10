@@ -2,9 +2,9 @@
 
 ## Summary
 
-PARSED is available as a collection of Python programs.
+PARSED is available as a collection of Python programs. We used Python 3.6 for this installation.
 
-The PARSED paper can be found [here](https://doi.org/10.1093/bioinformatics/btz728). Both the PARSED [package files](/patches/parsed/original) and a [user manual](/patches/parsed/original/PARSED_Manual_V1.pdf) can be downloaded in the `parsed_v1.zip` archive available with the supplementary materials of the PARSED paper. However, since this software does not appear to have been actively maintained since its publication, we include all relevant files in `patches/parsed/original` of this repo for ease of access. In doing so, we adopt for these files the same usage license identified in the paper, namely:
+The PARSED paper can be found [here](https://doi.org/10.1093/bioinformatics/btz728). Both the PARSED [package files](/pickers/parsed/original) and a [user manual](/pickers/parsed/PARSED_Manual_V1.pdf) can be downloaded in the `parsed_v1.zip` archive available with the supplementary materials of the PARSED paper. We include all relevant files in `pickers/parsed/` of this repo for ease of access. In doing so, we adopt for these files the same usage license identified in the paper, namely:
 
 > the PARSED package and user manual [are available] for noncommercial use
 
@@ -16,35 +16,19 @@ First, make a new directory for the PARSED package.
 mkdir parsed
 ```
 
-To install PARSED with our patches and bug fixes, copy the relevant files from `patches/parsed`:
+PARSED is available as it was originally published in `pickers/parsed/original/`. Modified versions of these files with our patches and bug fixes are available in in `pickers/parsed/`. We will assume the patched files are being used, but the original software can be used at any time by replacing references to `pickers/parsed/` with `pickers/parsed/original` where applicable.
+
+Create and activate a new conda environment with the required dependencies. It may take conda several tries to solve this environment due to the highly specific package dependencies. The versions specified for each package correspond with those listed on the first page of the [PARSED user manual](/pickers/parsed/PARSED_Manual_V1.pdf). It may be possible to use later versions of some packages (e.g., `mrcfile`) without adverse effects.
 
 ```shell script
-cp cryo-docs/patches/{mic_preprocess.py,parsed_main.py,particle_mass.py,pre_train_model.h5} parsed/
-```
-
-or, to install PARSED as it was originally published, copy the relevant files from `patches/parsed/original`:
-
-```shell script
-cp cryo-docs/patches/original/{mic_preprocess.py,parsed_main.py,particle_mass.py,pre_train_model.h5} parsed/
-```
-
-Create and activate a new conda environment with the required dependencies. It may take conda several tries to solve this environment due to the highly specific package dependencies. Note that the versions specified for each package correspond with those listed on the first page of the [PARSED user manual](/patches/parsed/original/PARSED_Manual_V1.pdf). It may be possible to use the latest versions of some packages (e.g., `mrcfile` and `trackpy`) without adverse effects.
-
-```shell script
-conda create -n parsed -c conda-forge h5py=2.7.1 keras=2.0.8 numba=0.37.0 pandas=0.20.3 matplotlib=2.1.0 mrcfile=1.0.1 trackpy=0.4.1 python=3.6
+conda create -n parsed -c conda-forge h5py=2.7.1 keras=2.0.8 numba=0.37.0 pandas=0.20.3 matplotlib=2.1.0 mrcfile=1.1.2 trackpy=0.4.1 tensorflow-gpu=1.7.0 pip python=3.6
 conda activate parsed
 ```
 
-Install any additional dependencies (not directly available through conda) with `pip`. In doing so, however, it is important that we use the `pip` executable located in the conda environment created above. To verify this, check that running `which pip` outputs something like `/path/to/conda_envs/cryolo/bin/pip`. If not, try restarting your shell session or running `conda deactivate parsed` followed by `conda activate parsed` before proceeding.
+Install any additional dependencies (not directly available through conda) with `pip`. In doing so, however, it is important that we use the `pip` executable that was just installed in the conda environment created above. To verify this, check that running `which pip` outputs something like `/path/to/conda_envs/parsed/bin/pip`. If not, try restarting your shell session or running `conda deactivate parsed` followed by `conda activate parsed` before proceeding.
 
 ```shell script
 pip install opencv-python
-```
-
-If your system does not already have an installation of `tensorflow` and/or `cudatoolkit`, run the following to install both (and their dependencies). Note that `tensorflow-gpu` 1.3.0 is no longer available for `python` versions higher than 3.6 (however, since we specified `python=3.6` when creating the `parsed` environment, this should work).
-
-```shell script
-conda install tensorflow-gpu=1.3.0
 ```
 
 ## Usage
@@ -64,22 +48,23 @@ Outputs
 Start by collecting the micrograph files (`*.mrc`) to be picked in a directory (assuming they are not already available in their own directory). If you would like to use an existing public data set, [our guide to the EMPIAR database](empiar.md) may be helpful.
 
 ```shell script
-cd /path/to/dataset
-mkdir mrc
-mv path/to/your_mrc_files/*.mrc mrc/
+mkdir -p name_of_data_set/mrc
+mv path/to/your_mrc_files/*.mrc name_of_data_set/mrc
 ```
 
-Create another directory, in which crYOLO configurations, temporary files, and predicted coordinates will be saved.
+Here we will use the micrographs located in `demo_data/` as an example. Create another directory, in which any output, temporary, or configuration files will be saved by the picker.
 
 ```shell script
-mkdir parsed_output
+mkdir demo_data/parsed_out
 ```
 
-Use the following command to pick all micrographs in `mrc/`. A description of parameters (modified from the [PARSED user manual](/patches/parsed/original/PARSED_Manual_V1.pdf)) is given below.
+Use the following command to pick all micrographs in `demo_data/mrc/`. A description of parameters (modified from the [PARSED user manual](/pickers/parsed/PARSED_Manual_V1.pdf)) is given below.
 
 ```shell script
-python -W ignore parsed_main.py --model=parsed/pre_train_model.h5 --data_path=mrc/ --output_path=parsed_output/ --file_pattern=*.mrc --job_suffix=autopick --angpixel=1.34 --img_size=4096 --edge_cut=0  --core_num=4 --aperture=160 --mass_min=4
+python -W ignore parsed_main.py --model=pickers/parsed/pre_train_model.h5 --data_path=demo_data/mrc/ --output_path=demo_data/parsed_out/ --file_pattern=*.mrc --job_suffix=autopick --angpixel=1.34 --img_size=4096 --edge_cut=0  --core_num=4 --aperture=160 --mass_min=4
 ```
+
+When providing arguments for the command above, relative directories can be specified with `./` and `../`, but do not use `~`, **as it does not appear to expand to the user's home folder**. Note that if PARSED does not recognize a path, it may exit with the usual `No such file or directory`, or it may also attempt to pick anyway, returning `Coordinates extraction finished 0 TotalPickNum found`.
 
 Parameters
 - `--model`: pre-trained segmentation model

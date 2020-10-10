@@ -2,6 +2,8 @@
 
 ## Summary
 
+ASPIRE (which includes APPLEpicker) is available as a set of conda-installable Python modules. We used Python 3.7 for this installation. 
+
 There are several versions of APPLEpicker—a [standalone Python version](https://github.com/PrincetonUniversity/APPLEpicker-python), a [standalone MATLAB version](https://github.com/PrincetonUniversity/APPLEpicker), and an implementation within [the ASPIRE project for Python](https://github.com/ComputationalCryoEM/ASPIRE-Python).
 
 The standalone version(s) seem to have been deprecated, according to one of the collaborators [here](https://github.com/PrincetonUniversity/APPLEpicker/issues/1#issuecomment-525574243). Therefore, the following document refers only to APPLEpicker as included in the ASPIRE-Python project.
@@ -12,41 +14,41 @@ The APPLEpicker paper can be found [here](https://doi.org/10.1016/j.jsb.2018.08.
 
 ASPIRE must be installed into its own conda environment. It can be obtained either as a pip-installable package or via its git repository. Because this guide includes several patches, it will follow the latter method.
 
-First, clone the ASPIRE repo using 
+First, clone the ASPIRE repo into `pickers/aspire/` using 
 
 ```shell script
-git clone https://github.com/ComputationalCryoEM/ASPIRE-Python.git
+git clone https://github.com/ComputationalCryoEM/ASPIRE-Python.git pickers/aspire
 ```
 
-During the course of our experiments, we have created a set of patches for APPLEpicker. If you would like to apply these changes, run the patch script included in `cryo-docs/patches/aspire`. This script will replace `apple.py`, `helper.py`, and `picking.py` in the `ASPIRE-Python/src/aspire/apple/` directory with our patched versions.
+During the course of our experiments, we have created a set of patches for APPLEpicker. If you would like to apply these changes, run the patch script included in `cryo-docs/patches/aspire`. This script will replace `apple.py`, `helper.py`, and `picking.py` in the `pickers/aspire/src/aspire/apple/` directory with our patched versions.
 
 ```shell script
-sh cryo-docs/patches/aspire/patch-aspire.sh ASPIRE-Python/
+sh patches/aspire/patch-aspire.sh pickers/aspire/
 ```
 
 Create a new conda environment containing the packages in the included `environment.yml` file.
 
 ```shell script
-conda env create -f ASPIRE-Python/environment.yml
+conda env create -f pickers/aspire/environment.yml
 conda activate aspire
 ```
 
 The ASPIRE README recommends running their provided unit tests using
 
 ```shell script
-python ASPIRE-Python/setup.py test
+python pickers/aspire/setup.py test
 ```
 
 A second method is also provided, which can be used if the above becomes deprecated in future.
 
 ```shell script
-PYTHONPATH=./ASPIRE-Python/src pytest tests
+PYTHONPATH=pickers/aspire/src pytest tests
 ```
 
 If unit tests pass, install ASPIRE to the active conda environment (make sure you run `conda activate aspire` first, if you have not already done so).
 
 ```shell script
-python ASPIRE-Python/setup.py install
+python pickers/aspire/setup.py install
 ```
 
 ## Usage
@@ -66,7 +68,7 @@ Outputs
 
 [TODO: SORT OUT ASPIRE CONFIG CMD, and/or whether config.ini is read from conda package (doesn't seem like it)]
 
-There are several configurable parameters hard-coded in `ASPIRE-Python/src/aspire/config.ini`, including the following. [TODO: FIGURE OUT DEFINITIONS FOR EACH IF POSSIBLE]
+There are several configurable parameters hard-coded in `pickers/aspire/src/aspire/config.ini`, including the following. [TODO: FIGURE OUT DEFINITIONS FOR EACH IF POSSIBLE]
 - `particle_size` (default: 78)
 - `query_image_size` (default: 52)
 - `max_particle_size` (default: 156)
@@ -79,27 +81,26 @@ There are several configurable parameters hard-coded in `ASPIRE-Python/src/aspir
 Start by collecting the micrograph files (`*.mrc`) to be picked in a directory (assuming they are not already available in their own directory). If you would like to use an existing public data set, [our guide to the EMPIAR database](empiar.md) may be helpful.
 
 ```shell script
-cd /path/to/dataset
-mkdir mrc
-mv path/to/your_mrc_files/*.mrc mrc/
+mkdir -p name_of_data_set/mrc
+mv path/to/your_mrc_files/*.mrc name_of_data_set/mrc
 ```
 
-Create another directory, in which crYOLO configurations, temporary files, and predicted coordinates will be saved.
+Here we will use the micrographs located in `demo_data/` as an example. Create another directory, in which any output, temporary, or configuration files will be saved by the picker.
 
 ```shell script
-mkdir apple_output
+mkdir demo_data/apple_out
 ```
 
-To pick particles for every micrograph in `mrc/`, run
+To pick particles for every micrograph in `demo_data/mrc/`, run
 
 ```shell script
-python -m aspire apple --mrc_dir mrc/ --output_dir apple_output/
+python -m aspire apple --mrc_dir demo_data/mrc/ --output_dir demo_data/apple_out/
 ```
 
 or, to pick a single micrograph only, run
 
 ```shell script
-python -m aspire apple --mrc_file mrc/your_micrograph.mrc --output_dir apple_output/
+python -m aspire apple --mrc_file demo_data/mrc/your_micrograph.mrc --output_dir demo_data/apple_out/
 ```
 
 The `--create_jpg` flag can be appended to either of the `python -m aspire apple` commands above to generate and save images of the micrograph(s) with particle detections overlayed.

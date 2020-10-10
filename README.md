@@ -1,4 +1,4 @@
-# cryo-docs
+# Cryo-EM Particle Picker Docs
 
 Hello!
 
@@ -9,29 +9,30 @@ These guides are primarily written for use on Linux systems; it may be possible 
 We recommend something like the following directory hierarchy for ease of housekeeping, and will assume this general structure from now on.
 
 ```text
-main/              <-- default current working directory
-├── cryo-docs/     <-- this repo
-│   ├── guides/
-│   ├── patches/
-│   └── etc.
-├── picker1/
-├── picker2/
-├── picker3/
-├── mrc/
-├── train_image/
-├── train_annot/
+cryo-docs/              <-- this repo
+├── guides/
+├── patches/
+├── pickers/
+│   ├── picker1/        ⎤
+│   ├── picker2/        ⎥ pickers to be installed here
+│   └── picker3/        ⎦
+├── demo_data/
+│   ├── mrc/
+│   ├── train_mrc/
+│   ├── train_coord/
+│   ├── picker1_out/    ⎤
+│   ├── picker2_out/    ⎥ picker output, created in guides
+│   └── picker3_out/    ⎦
 ... etc.
 ```
 
-First, clone this repo into its own directory (creating directories as needed), as per the above structure. **All installation guides will begin by assuming that your current working directory is** `main/` **and that this repo is available at** `main/cryo-docs/`.
-
-Replace `/path/to/main` with the appropriate path in which to install particle pickers (if following the above folder hierarchy). Note that here and in all guides, `/path/to/something` should be replaced by the path to the indicated resource on your system.
+First, clone this repo as per the above structure and change directory into the clone. **All installation guides will begin by assuming that your current working directory is `cryo-docs/`.** Note that here and in all guides, `/path/to/something` should be replaced by the path to the indicated resource on your system.
 
 ```shell script
-mkdir -p /path/to/main
-cd /path/to/main
-git clone --depth 1 https://github.com/seb-seager/cryo-docs.git
+git clone --depth 1 https://github.com/seb-seager/cryo-docs.git && cd cryo-docs
 ```
+
+This repo's `demo_data/` directory contains some sample data (five micrographs from the [EMPIAR-10017](https://www.ebi.ac.uk/pdbe/emdb/empiar/entry/10017/) beta-galactosidase data set) that can be used to test picker installations. All guides will refer to these data, but any references to `demo_data/` can be replaced with applicable paths to your own micrograph data.
 
 To get started, take a look at our particle picker [usage guides](guides).
 

@@ -2,7 +2,7 @@
 
 ## Summary
 
-crYOLO is available as a Python package from PyPI.
+crYOLO is available as a Python package from PyPI. We used Python 3.6 for this installation.
 
 The crYOLO paper can be found [here](https://doi.org/10.1038/s42003-019-0437-z). Refer also to the [wiki](https://sphire.mpg.de/wiki/doku.php?id=pipeline:window:cryolo) (potentially outdated) and the [readthedocs user guide](https://cryolo.readthedocs.io/en/latest/) for more information. The following guide is drawn in part from these resources.
 
@@ -11,11 +11,11 @@ The crYOLO paper can be found [here](https://doi.org/10.1038/s42003-019-0437-z).
 Create and activate a new conda environment with the required dependencies.
 
 ```shell script
-conda create -n cryolo -c conda-forge -c anaconda python=3.6 pyqt=5 cudnn=7.1.2 numpy==1.14.5 cython wxPython==4.0.4 intel-openmp==2019.4
+conda create -n cryolo -c conda-forge -c anaconda python=3.6 pyqt=5 cudnn=7.1.2 numpy==1.14.5 cython wxPython==4.0.4 intel-openmp==2019.4 pip
 conda activate cryolo
 ```
 
-Since crYOLO is available through PyPI, it can be installed using the package manager `pip`. In doing so, however, it is important that we use the `pip` and `python` executables located in the conda environment created above. To verify this, check that running `which pip` outputs something like `/path/to/conda_envs/cryolo/bin/pip`, and that `which python` outputs something like `conda_envs/cryolo/bin/python`.
+Since crYOLO is available through PyPI, it can be installed using the package manager `pip`. In doing so, however, it is important that we use the `pip` executable that was just installed in the conda environment created above. To verify this, check that running `which pip` outputs something like `/path/to/conda_envs/cryolo/bin/pip`, and that `which python` outputs something like `/path/to/conda_envs/cryolo/bin/python`.
 
 To install crYOLO with GPU support (recommended, if you have a GPU available), run 
 
@@ -72,15 +72,14 @@ Outputs
 Start by collecting the micrograph files (`*.mrc`) to be picked in a directory (assuming they are not already available in their own directory). If you would like to use an existing public data set, [our guide to the EMPIAR database](empiar.md) may be helpful.
 
 ```shell script
-cd /path/to/dataset
-mkdir mrc
-mv path/to/your_mrc_files/*.mrc mrc/
+mkdir -p name_of_data_set/mrc
+mv path/to/your_mrc_files/*.mrc name_of_data_set/mrc
 ```
 
-Create another directory, in which crYOLO configurations, temporary files, and predicted coordinates will be saved.
+Here we will use the micrographs located in `demo_data/` as an example. Create another directory, in which any output, temporary, or configuration files will be saved by the picker.
 
 ```shell script
-mkdir cryolo_output
+mkdir demo_data/cryolo_out
 ```
 
 This guide covers usage of crYOLO from the command line. A crYOLO GUI (see [this tutorial](https://cryolo.readthedocs.io/en/stable/tutorials/tutorial_overview.html#start-cryolo)) is also available, which provides approximately the same functionality as the command line interface. The GUI requires either a physical monitor connected to the machine running crYOLO or an X11 display forwarding configuration (which sends the GUI to your machine over SSH). The GUI can be accessed by running `cryolo_gui.py` with no arguments.
@@ -103,16 +102,16 @@ and, for optimal performance, should be selected from the following list:
 
  However, it is also possible to refine that model or train a new one from scratch to fit your data (see configuration methods [2](#method-2-refine-the-general-model-to-your-data) and [3](#method-3-train-your-own-model-from-scratch) below). This section describes how training data can be created.
 
-In order to isolate training data, a subset of the micrographs (here, in `mrc/`) should be placed into a separate directory (`train_image/`). These images, along with some known particle coordinates for each (in `train_annot/`), will be used to train the model. crYOLO matches an image to its corresponding coordinate file by comparing the filenames (e.g. `train_image/Falcon_2012_06_12-15_27_22_0.mrc` and `train_annot/Falcon_2012_06_12-15_27_22_0.box` would be paired).
+In order to isolate training data, a subset of the micrographs (here, in `demo_data/mrc/`) should be placed into a separate directory (`demo_data/train_mrc/`). These images, along with some known particle coordinates for each (in `demo_data/train_coord/`), will be used to train the model. crYOLO matches an image to its corresponding coordinate file by comparing the filenames (e.g. `demo_data/train_mrc/Falcon_2012_06_12-14_57_34_0.mrc` and `demo_data/train_coord/Falcon_2012_06_12-14_57_34_0.box` would be paired).
 
 ```shell script
-mkdir train_image train_annot
-mv mrc/train_1.mrc mrc/train_2.mrc mrc/train_3.mrc train_images/
+mkdir demo_data/train_mrc demo_data/train_coord
+mv demo_data/train_mrc/{train_1.mrc,train_2.mrc,train_3.mrc} demo_data/train_mrc/
 ```
 
-To populate `train_annot/`, the provided `cryolo_boxmanager.py` or other tools like `e2boxer` (see EMAN2 wiki [here](https://blake.bcm.edu/emanwiki/EMAN2/Programs/e2boxer)) can be used. They provide a graphical interface for manually selecting particle coordinates. Note that currently `cryolo_boxmanager.py` does not support filaments, so `e2helixboxer.py` is recommended in that case (more on that [here](https://cryolo.readthedocs.io/en/stable/tutorials/tutorial_overview.html#id6)).
+To populate `train_coord/`, the provided `cryolo_boxmanager.py` or other tools like `e2boxer` (see EMAN2 wiki [here](https://blake.bcm.edu/emanwiki/EMAN2/Programs/e2boxer)) can be used. They provide a graphical interface for manually selecting particle coordinates. Note that currently `cryolo_boxmanager.py` does not support filaments, so `e2helixboxer.py` is recommended in that case (more on that [here](https://cryolo.readthedocs.io/en/stable/tutorials/tutorial_overview.html#id6)).
 
-To open a micrograph for manual picking in the crYOLO box manager, run `cryolo_boxmanager.py`, click `File` → `Open image folder`, and select the `train_image/` directory created and populated above. From here, there are options to apply a temporary low-pass filter or change the box size (see the [Box size determination](#box-size-determination) section above).
+To open a micrograph for manual picking in the crYOLO box manager, run `cryolo_boxmanager.py`, click `File` → `Open image folder`, and select the `train_mrc/` directory created and populated above. From here, there are options to apply a temporary low-pass filter or change the box size (see the [Box size determination](#box-size-determination) section above).
 
 Within a manual picking window,
 - Left-click a particle to select it
@@ -139,11 +138,11 @@ as well as simulated data sets based on the following PDB entries:
 
 Use one of these commands to generate a configuration file.
 
-| Model               | Sample command                                                                                                   |
-|---------------------|------------------------------------------------------------------------------------------------------------------|
-| Phosaurus low-pass* | `cryolo_gui.py config cryolo_output/cryolo_config.json 220 --filter LOWPASS --low_pass_cutoff 0.1`               |
-| JANNI-denoised**    | `cryolo_gui.py config cryolo_output/cryolo_config.json 220 --filter JANNI --janni_model /path/to/janni_model.h5` |
-| Negative stain      | `cryolo_gui.py config cryolo_output/cryolo_config.json 220 --filter NONE`                                        |
+| Model               | Sample command                                                                                                          |
+|---------------------|-------------------------------------------------------------------------------------------------------------------------|
+| Phosaurus low-pass* | `cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --filter LOWPASS --low_pass_cutoff 0.1`               |
+| JANNI-denoised**    | `cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --filter JANNI --janni_model /path/to/janni_model.h5` |
+| Negative stain      | `cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --filter NONE`                                        |
 
 *\* The* `low_pass_cutoff` *can be changed to anything between 0 and 0.5 inclusive, but 0.1 is the default*
 
@@ -151,40 +150,40 @@ Use one of these commands to generate a configuration file.
 
 #### Method 2. Refine the general model to your data
 
-*We assume that you have a directory* `train_image/` *containing a set of training micrographs, and another* `train_annot/` *containing corresponding coordinate files. If not, please take a look at the section `Creating training data` above.*
+*We assume that you have a directory* `demo_data/train_mrc/` *containing a set of training micrographs, and another* `demo_data/train_coord/` *containing corresponding coordinate files. If not, please take a look at the [Creating training data](#creating-training-data) section above.*
 
 To allow crYOLO to separate automatically a random 20% of the training set for use as a validation set (default), run
 
 ```shell script
-cryolo_gui.py config cryolo_output/cryolo_config.json 220 --train_image_folder train_image/ --train_annot_folder train_annot/ --pretrained_weights /path/to/one_of_the_gmodels.h5
+cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --train_image_folder demo_data/train_mrc/ --train_annot_folder demo_data/train_coord/ --pretrained_weights /path/to/one_of_the_gmodels.h5
 ```
 
-Otherwise, to specify validation images and their corresponding coordinate files, make new directories `valid_image/` and `valid_annot/`, populate them with micrographs and box files accordingly, and run the configuration command.
+Otherwise, to specify validation images and their corresponding coordinate files, make new directories `demo_data/valid_mrc/` and `demo_data/valid_coord/`, populate them with micrographs and box files accordingly, and run the configuration command.
 
 ```shell script
-mkdir valid_image valid_annot
-mv train_images/train_1.mrc train_images/train_2.mrc valid_images/
-mv train_annot/train_1.box train_annot/train_2.box valid_annot/
-cryolo_gui.py config cryolo_output/cryolo_config.json 220 --train_image_folder train_image/ --train_annot_folder train_annot/ --pretrained_weights /path/to/one_of_the_gmodels.h5 --valid_image_folder valid_image/ --valid_annot_folder valid_annot/
+mkdir demo_data/valid_mrc demo_data/valid_coord
+mv demo_data/train_mrc/{train_1.mrc,train_2.mrc} demo_data/valid_mrc/
+mv demo_data/train_coord/{train_1.box,train_2.box} demo_data/valid_coord/
+cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --train_image_folder demo_data/train_mrc/ --train_annot_folder demo_data/train_coord/ --pretrained_weights /path/to/one_of_the_gmodels.h5 --valid_image_folder demo_data/valid_mrc/ --valid_annot_folder demo_data/valid_coord/
 ```
 
 #### Method 3. Train your own model from scratch
 
-*We assume that you have a directory* `train_image/` *containing a set of training micrographs, and another* `train_annot/` *containing corresponding coordinate files. If not, please take a look at the section `Creating training data` above.*
+*We assume that you have a directory* `demo_data/train_mrc/` *containing a set of training micrographs, and another* `demo_data/train_coord/` *containing corresponding coordinate files. If not, please take a look at the [Creating training data](#creating-training-data) section above.*
 
 To allow crYOLO to separate automatically a random 20% of the training set for use as a validation set (default), run
 
 ```shell script
-cryolo_gui.py config cryolo_output/cryolo_config.json 220 --train_image_folder train_image/ --train_annot_folder train_annot/
+cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --train_image_folder demo_data/train_mrc/ --train_annot_folder demo_data/train_coord/
 ```
 
-Otherwise, to specify validation images and their corresponding coordinate files, make new directories `valid_image/` and `valid_annot/`, populate them with micrographs and box files accordingly, and run the configuration command.
+Otherwise, to specify validation images and their corresponding coordinate files, make new directories `demo_data/valid_mrc/` and `demo_data/valid_coord/`, populate them with micrographs and box files accordingly, and run the configuration command.
 
 ```shell script
-mkdir valid_image valid_annot
-mv train_images/train_1.mrc train_images/train_2.mrc valid_images/
-mv train_annot/train_1.box train_annot/train_2.box valid_annot/
-cryolo_gui.py config cryolo_output/cryolo_config.json 220 --train_image_folder train_image/ --train_annot_folder train_annot/ --valid_image_folder valid_image/ --valid_annot_folder valid_annot/
+mkdir demo_data/valid_mrc demo_data/valid_coord
+mv demo_data/train_mrc/{train_1.mrc,train_2.mrc} demo_data/valid_mrc/
+mv demo_data/train_coord/{train_1.box,train_2.box} demo_data/valid_coord/
+cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --train_image_folder demo_data/train_mrc/ --train_annot_folder demo_data/train_coord/ --valid_image_folder demo_data/valid_mrc/ --valid_annot_folder demo_data/valid_coord/
 ```
 
 ### Training
@@ -193,11 +192,11 @@ cryolo_gui.py config cryolo_output/cryolo_config.json 220 --train_image_folder t
 
 Use a command below according to your intended training method. Note that it is possible to run method 3 below (training from scratch) using configuration method [2](#method-2-refine-the-general-model-to-your-data) above. This allows the new model's weights to be initialized closer (potentially) to the values they ought to end up at, while still performing "from scratch" training (*not* refinement).
 
-| Method                      | Sample command                                                                     |
-|-----------------------------|------------------------------------------------------------------------------------|
-| 1. General model as-is      | N/A (no training required)                                                         |
-| 2. General model refinement | `cryolo_train.py -c cryolo_output/cryolo_config.json -w 0 -g 0 --fine_tune -lft 2` |
-| 3. Training from scratch    | `cryolo_train.py -c cryolo_output/cryolo_config.json -w 5 -g 0`                    |
+| Method                      | Sample command                                                                            |
+|-----------------------------|-------------------------------------------------------------------------------------------|
+| 1. General model as-is      | N/A (no training required)                                                                |
+| 2. General model refinement | `cryolo_train.py -c demo_data/cryolo_out/cryolo_config.json -w 0 -g 0 --fine_tune -lft 2` |
+| 3. Training from scratch    | `cryolo_train.py -c demo_data/cryolo_out/cryolo_config.json -w 5 -g 0`                    |
 
 The `-w` flag sets the number of warmup epochs, and must be zero when using `--fine_tune` (for model refinement). The `-lft` flag sets the number of layers to fine tune, for which the authors recommend a default of 2. The `-g` flag indicates the GPU ID(s) to be used in training. On an NVIDIA-based system, use the `nvidia-smi` command to get a list of available GPUs and their IDs. Specify multiple GPUs with something like `-g '0 1 2'`.
 
@@ -208,15 +207,15 @@ You might also consider adding the `--cleanup` flag, which deletes filtered imag
 To pick particles (not filaments) for every micrograph in `mrc/` using either one of the general models (if following configuration/training method 1) or a model you refined or trained in the previous section, run the following:
 
 ```shell script
-cryolo_predict.py -c cryolo_output/cryolo_config.json -w path/to/model.h5 -i mrc/ -g 0 -o cryolo_output/ -t 0.3
+cryolo_predict.py -c demo_data/cryolo_out/cryolo_config.json -w path/to/model.h5 -i mrc/ -g 0 -o demo_data/cryolo_out/ -t 0.3
 ```
 
-The flag `-t` sets the confidence threshold (i.e., how "sure" crYOLO is that a particular detection is actually a particle) below which picks will not be included in the output `*.star` and `*.box` coordinate files. Regardless of this value, however, all picks—along with their confidence values—will be recorded in `cryolo_output/CBOX/*.cbox` files.
+The flag `-t` sets the confidence threshold (i.e., how "sure" crYOLO is that a particular detection is actually a particle) below which picks will not be included in the output `*.star` and `*.box` coordinate files. Regardless of this value, however, all picks—along with their confidence values—will be recorded in `demo_data/cryolo_out/CBOX/*.cbox` files.
 
 If picking filaments, the following command can be used:
 
 ```shell script
-cryolo_predict.py -c cryolo_output/cryolo_config.json -w path/to/model.h5 -i mrc/ -g 0 -o cryolo_output/ -t 0.3 --filament -fw 100 -bd 20 -mn 6
+cryolo_predict.py -c demo_data/cryolo_out/cryolo_config.json -w path/to/model.h5 -i mrc/ -g 0 -o demo_data/cryolo_out/ -t 0.3 --filament -fw 100 -bd 20 -mn 6
 ```
 
 where the `-fw` indicates filament width in pixels, `-bd` indicates the distance between adjacent boxes on the filament, and `-mn` indicates the smallest number of boxes that are allowed to constitute a filament.

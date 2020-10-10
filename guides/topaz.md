@@ -2,7 +2,7 @@
 
 ## Summary
 
-Topaz is available as a conda package.
+Topaz is available as a conda package. We used Python 3.6 for this installation.
 
 The Topaz paper can be found [here](https://doi.org/10.1038/s41592-019-0575-8). Refer also to the [GitHub repo](https://github.com/tbepler/topaz), the [web-based GUI](https://emgweb.nysbc.org/topaz.html) for generating Topaz commands, and the [tutorials](https://github.com/tbepler/topaz/tree/master/tutorial) included in the Topaz repo for more information. The following guide is drawn in part from these resources.
 
