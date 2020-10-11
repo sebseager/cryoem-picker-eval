@@ -29,7 +29,7 @@ cryo-docs/              <-- this repo
 First, clone this repo as per the above structure and change directory into the clone. **All installation guides will begin by assuming that your current working directory is `cryo-docs/`.** Note that here and in all guides, `/path/to/something` should be replaced by the path to the indicated resource on your system.
 
 ```shell script
-git clone --depth 1 https://github.com/seb-seager/cryo-docs.git && cd cryo-docs
+git clone --depth 1 https://github.com/sebseager/cryo-docs.git && cd cryo-docs
 ```
 
 This repo's `demo_data/` directory contains some sample data (five micrographs from the [EMPIAR-10017](https://www.ebi.ac.uk/pdbe/emdb/empiar/entry/10017/) beta-galactosidase data set) that can be used to test picker installations. All guides will refer to these data, but any references to `demo_data/` can be replaced with applicable paths to your own micrograph data.
