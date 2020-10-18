@@ -33,22 +33,24 @@ conda env create -f pickers/aspire/environment.yml
 conda activate aspire
 ```
 
-The ASPIRE README recommends running their provided unit tests using
+The new environment will be named `aspire` by default (as specified in the environment file), but `-n your_name_here` can be added to the `conda env create` command to change this name.
+
+The ASPIRE README recommends running their provided unit tests before installing.
 
 ```shell script
-python pickers/aspire/setup.py test
+(cd pickers/aspire && python setup.py test)
 ```
 
 A second method is also provided, which can be used if the above becomes deprecated in future.
 
 ```shell script
-PYTHONPATH=pickers/aspire/src pytest tests
+(cd pickers/aspire && PYTHONPATH=./src pytest tests)
 ```
 
 If unit tests pass, install ASPIRE to the active conda environment (make sure you run `conda activate aspire` first, if you have not already done so).
 
 ```shell script
-python pickers/aspire/setup.py install
+(cd pickers/aspire && python setup.py install)
 ```
 
 ## Usage

@@ -27,6 +27,6 @@ fi
 
 self_dir=$(dirname "$0")
 
-mv -v "$self_dir/apple.py" "$apple_dir"
-mv -v "$self_dir/helper.py" "$apple_dir"
-mv -v "$self_dir/picking.py" "$apple_dir"
+cp -v "$self_dir/apple.py" "$apple_dir"
+cp -v "$self_dir/helper.py" "$apple_dir"
+cp -v "$self_dir/picking.py" "$apple_dir"
