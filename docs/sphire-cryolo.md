@@ -102,11 +102,11 @@ and, for optimal performance, should be selected from the following list:
 
  However, it is also possible to refine that model or train a new one from scratch to fit your data (see configuration methods [2](#method-2-refine-the-general-model-to-your-data) and [3](#method-3-train-your-own-model-from-scratch) below). This section describes how training data can be created.
 
-In order to isolate training data, a subset of the micrographs (here, in `demo_data/mrc/`) should be placed into a separate directory (`demo_data/train_mrc/`). These images, along with some known particle coordinates for each (in `demo_data/train_coord/`), will be used to train the model. crYOLO matches an image to its corresponding coordinate file by comparing the filenames (e.g. `demo_data/train_mrc/Falcon_2012_06_12-14_57_34_0.mrc` and `demo_data/train_coord/Falcon_2012_06_12-14_57_34_0.box` would be paired).
+In order to isolate training data, a subset of the micrographs (here, some `train_1.mrc`, `train_2.mrc`, etc. in `demo_data/mrc/`) should be placed into a separate directory (`demo_data/train_mrc/`). These images, along with some known particle coordinates for each (in `demo_data/train_coord/`), will be used to train the model. crYOLO matches an image to its corresponding coordinate file by comparing the filenames (e.g. `demo_data/train_mrc/Falcon_2012_06_12-14_57_34_0.mrc` and `demo_data/train_coord/Falcon_2012_06_12-14_57_34_0.box` would be paired).
 
 ```shell script
 mkdir demo_data/train_mrc demo_data/train_coord
-mv demo_data/train_mrc/{train_1.mrc,train_2.mrc,train_3.mrc} demo_data/train_mrc/
+mv demo_data/mrc/{train_1.mrc,train_2.mrc,train_3.mrc} demo_data/train_mrc/
 ```
 
 To populate `train_coord/`, the provided `cryolo_boxmanager.py` or other tools like `e2boxer` (see EMAN2 wiki [here](https://blake.bcm.edu/emanwiki/EMAN2/Programs/e2boxer)) can be used. They provide a graphical interface for manually selecting particle coordinates. Note that currently `cryolo_boxmanager.py` does not support filaments, so `e2helixboxer.py` is recommended in that case (more on that [here](https://cryolo.readthedocs.io/en/stable/tutorials/tutorial_overview.html#id6)).

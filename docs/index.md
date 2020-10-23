@@ -7,7 +7,7 @@ title: Cryo-EM Particle Picker Docs
 
 Hello!
 
-To get started, take a look at our particle picker [usage guides](guides).
+To get started, take a look at our particle picker [usage guides](docs).
 
 ## Additional remarks
 
