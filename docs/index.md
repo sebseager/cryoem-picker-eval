@@ -5,9 +5,53 @@ title: Cryo-EM Particle Picker Docs
 
 # Cryo-EM Particle Picker Docs
 
-Hello!
+## Table of Contents
 
-To get started, take a look at our particle picker [usage guides](docs).
+- [Introduction](#introduction) (this document)
+- Particle picker guides [TODO: ADD OTHERS WHEN DONE]
+    - [ASPIRE-APPLEpicker](aspire-apple.md)
+    - [DeepPicker](deeppicker.md)
+    - [PARSED](parsed.md)
+    - [SPHIRE-crYOLO](sphire-cryolo.md)
+    - [Topaz](topaz.md)
+- Miscellaneous
+    - [EMPIAR usage guide](empiar.md)
+
+## Introduction
+
+This repository (repo) contains installation guides, procedures, and patches for cryo-EM particle pickers, as followed during our experimentation for [TODO: FILL PAPER CITATION].
+
+These guides are primarily written for use on Linux systems; it may be possible to adapt some procedures to other *NIX systems like macOS with relatively minor changes, but we have not tested these use cases. Installations on Windows will likely be more complicated, and may require various supplementary procedures or compatibility layers.
+
+We recommend something like the following directory hierarchy for ease of housekeeping, and will assume this general structure from now on.
+
+```text
+cryo-docs/              <-- this repo
+├── docs/               <-- picker installation/usage guides
+├── patches/
+├── pickers/
+│   ├── picker1/        ⎤
+│   ├── picker2/        ⎥ pickers to be installed here
+│   └── picker3/        ⎦
+├── demo_data/
+│   ├── mrc/
+│   ├── train_mrc/
+│   ├── train_coord/
+│   ├── picker1_out/    ⎤
+│   ├── picker2_out/    ⎥ picker output, created in guides
+│   └── picker3_out/    ⎦
+... etc.
+```
+
+If you haven't already, please clone the most recent version of this repo (which follows the above structure) and change directory into the clone. **All installation guides will begin by assuming that your current working directory is `cryo-docs/`.** Note that here and in all guides, `/path/to/something` should be replaced by the path to the indicated resource on your system.
+
+```shell script
+git clone --depth 1 https://github.com/sebseager/cryo-docs.git && cd cryo-docs
+```
+
+This repo's `demo_data/` directory contains some sample data (five micrographs from the [EMPIAR-10017](https://www.ebi.ac.uk/pdbe/emdb/empiar/entry/10017/) beta-galactosidase data set) that can be used to test picker installations. All guides will refer to these data, but any references to `demo_data/` can be replaced with applicable paths to your own micrograph data.
+
+To get started, take a look at our particle picker [usage guides](docs) (or navigate using the table of contents above).
 
 ## Additional remarks
 
