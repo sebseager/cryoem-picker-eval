@@ -47,7 +47,7 @@ In case the above does not work, a second unit test method is also provided, tho
 (cd pickers/aspire && python setup.py test)
 ```
 
-If unit tests pass, install ASPIRE to the active conda environment (make sure you run `conda activate aspire` first, if you have not already done so).
+Install ASPIRE to the active conda environment (make sure you run `conda activate aspire` first, if you have not already done so).
 
 ```shell script
 (cd pickers/aspire && python setup.py install)
