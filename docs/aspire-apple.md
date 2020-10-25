@@ -35,16 +35,16 @@ conda activate aspire
 
 The new environment will be named `aspire` by default (as specified in the environment file), but `-n your_name_here` can be added to the `conda env create` command to change this name.
 
-The ASPIRE README recommends running their provided unit tests before installing.
-
-```shell script
-(cd pickers/aspire && python setup.py test)
-```
-
-A second method is also provided, which can be used if the above becomes deprecated in future.
+The ASPIRE README recommends running their provided unit tests before installing. (Note that due to modifications made to the APPLEpicker source by our patch script above, the `testPickCenters` unit test may fail. The rest of the tests should pass with a handful of `FutureWarning`s, `DeprecationWarning`s, etc.)
 
 ```shell script
 (cd pickers/aspire && PYTHONPATH=./src pytest tests)
+```
+
+A second method is also provided in case the above does not work, though it may become deprecated in future.
+
+```shell script
+(cd pickers/aspire && python setup.py test)
 ```
 
 If unit tests pass, install ASPIRE to the active conda environment (make sure you run `conda activate aspire` first, if you have not already done so).
