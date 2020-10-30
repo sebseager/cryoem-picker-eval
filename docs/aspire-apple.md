@@ -75,8 +75,8 @@ There are several configurable parameters hard-coded in `pickers/aspire/src/aspi
 - `query_image_size` (default: 52)
 - `max_particle_size` (default: 156)
 - `min_particle_size` (default: 19)
-- `tau1` (default: 710)
-- `tau2` (default: 7100)
+- `tau1` (default: 710): percentage of training images believed to contain a particle
+- `tau2` (default: 7100): percentage of training images believed may *potentially* contain a particle
 
 ### Picking
 
