@@ -51,7 +51,7 @@ git clone --depth 1 https://github.com/sebseager/cryo-docs.git && cd cryo-docs
 
 This repo's `demo_data/` directory contains some sample data (five micrographs from the [EMPIAR-10017](https://www.ebi.ac.uk/pdbe/emdb/empiar/entry/10017/) beta-galactosidase data set) that can be used to test picker installations. All guides will refer to these data, but any references to `demo_data/` can be replaced with applicable paths to your own micrograph data.
 
-To get started, take a look at our particle picker [usage guides](docs) (or navigate using the table of contents above).
+To get started, take a look at our particle picker [usage guides](/docs) (or navigate using the table of contents above).
 
 ## Additional remarks
 
