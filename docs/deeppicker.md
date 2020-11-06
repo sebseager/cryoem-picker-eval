@@ -49,7 +49,7 @@ Note that `conda search tensorflow-gpu` can be used to see which versions of `te
 
 DeepPicker is a *trainable* particle picker, that when presented coordinate files of particles along with the micrographs of origin, can produce new `.h5` files that DeepPicker can then operate by to make refined picks. 
 
-Thus, the dfesired application is important:
+Thus, the desired application is important:
 - If wanting to pick by the general model that DeepPicker comes with, follow heading 'Pick using pretrained model'
 - If wanting to train a new model and then pick with that model, follow heading 'Training a new model' and then 'Pick using pretrained model' (*but substitute the `pre_trained_model` parameter with the name of the newly created `.h5` file*)
 
