@@ -43,4 +43,7 @@ conda install tensorflow-gpu=#.##.##
 
 Note that `conda search tensorflow-gpu` can be used to see which versions of `tensorflow-gpu` are available with conda. If the version you would like to install is not available in your conda channels, you can either specify a different channel or install everything manually with `pip`—see [release history](https://pypi.org/project/tensorflow-gpu/#history) for `tensorflow-gpu`.
 
-## Usage [TODO: FINISH THIS SECTION]
+## Usage
+
+### Inputs
+
