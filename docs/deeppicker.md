@@ -47,17 +47,17 @@ Note that `conda search tensorflow-gpu` can be used to see which versions of `te
 
 ### Overview
 
-DeepPicker is a *trainable* particle picker, that when presented coordinate files of particles along with the micrographs of origin, can produce new `.h5` files that DeepPicker can then operate by to make refined picks. 
+DeepPicker is a trainable particle picker, that when presented coordinate files of particles along with the micrographs of origin, can produce new `.h5` files that DeepPicker can then operate by to make refined picks. 
 
 Thus, the desired application is important:
-- If wanting to pick by the general model that DeepPicker comes with, follow heading 'Pick using pretrained model'
-- If wanting to train a new model and then pick with that model, follow heading 'Training a new model' and then 'Pick using pretrained model' (*but substitute the `pre_trained_model` parameter with the name of the newly created `.h5` file*)
+- To pick by the general model that DeepPicker comes with, skip to the [Pick using pretrained model](#pick-using-pretrained-model) section.
+- To train a new model and then pick with that model, start by [Training a new model](#training-a-new-model), then [Pick using pretrained model](#pick-using-pretrained-model) (but substitute the `pre_trained_model` parameter with the name of the newly created `.h5` file).
 
 ### Training a new model
 
 #### Specifics
 
-**File formatting:** DeepPicker has a very strict format of `.star` files that it can comprehend. Our script [INSERT SOMETHING], which converts `.box` ground truth coordinate files from EMPIAR into readable `.star` files, may be of help. 
+**File formatting:** DeepPicker has a very strict format of `.star` files that it can comprehend. Our script [TODO], which converts `.box` ground truth coordinate files from EMPIAR into readable `.star` files, may be of help. 
 
 **File location:** The `.star` files *in proper format* have to be in the same folder as the micrographs they correspond to.
 
