@@ -51,7 +51,9 @@ DeepPicker is a trainable particle picker, that when presented coordinate files 
 
 Thus, the desired application is important:
 - To pick by the general model that DeepPicker comes with, skip to the [Pick using pretrained model](#pick-using-pretrained-model) section.
-- To train a new model and then pick with that model, start by [Training a new model](#training-a-new-model), then [Pick using pretrained model](#pick-using-pretrained-model) (but substitute the `pre_trained_model` parameter with the name of the newly created `.h5` file).
+- To train a new model and then pick with that model, start by [Training a new model](#training-a-new-model), then [Pick using pretrained model](#pick-using-pretrained-model) (but substitute the `pre_trained_model` parameter with the name of the newly created model, which will be a `.h5` file).
+
+`.h5` file refers to a HDF5 format, which is a binary data format container for large arrays of data; this is an easy format for the NumPy module in python - which DeepPicker uses - to decipher. It works in DeepPicker's case to store particle information to identify. 
 
 ### Training a new model
 
@@ -65,7 +67,8 @@ Thus, the desired application is important:
 
 #### Running training
 
-Assuming the aforementioned specifics are met, use this command, with tailoring of parameters. Parameters outlined below as well.
+Assuming the aforementioned specifics are met, the following command will create a new model, with tailoring of parameters. Parameters outlined below as well.
+Note: Command is directory-specific for location of `train.py` and the inputDir; running the command below necessitates being in the same directory as `train.py`, otherwise specify the folder. 
 
 ```shell script
 python train.py --train_type 1 --train_inputDir "input_dir" --particle_size ### --mrc_number -1 --particle_number -1 --coordinate_symbol 'some_string' --model_save_dir 'output_dir' --model_save_file 'output_model_name'
@@ -97,6 +100,7 @@ mkdir demo_data/deeppicker_out
 ```
 
 Use the following command to pick all micrographs in `demo_data/mrc/`. A description of parameters is given below.
+Note: Command is again directory-specific for `autoPick.py`; you need to be in the same directory as autoPick.py or specify the folder location. 
 
 ```shell script
 python autoPick.py --inputDir 'demo_data/mrc/' --pre_trained_model 'pretrained_or_created_model' --particle_size ### --mrc_number -1 --outputDir 'demo_data/deepicker_out' --coordinate_symbol 'text_indicator' --threshold 0.5
