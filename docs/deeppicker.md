@@ -20,6 +20,12 @@ First, clone the DeepPicker repo into `pickers/deeppicker/` using
 git clone https://github.com/nejyeah/DeepPicker-python.git pickers/deeppicker
 ```
 
+In some cases, we have found that DeepPicker may not run properly as-is. If you would like to apply our patches to DeepPicker, run the script included in `cryo-docs/patches/deeppicker`. This script will make changes to all `*.py` files in the directory passed to it (`pickers/deeppicker/` in this case).
+
+```shell script
+sh patches/deeppicker/patch-deeppicker.sh pickers/deeppicker/
+```
+
 Create and activate a new conda environment using Python version 3.6 (since `tensorflow` versions 1.12.0 and earlier do not support Python 3.7).
 
 ```shell script
