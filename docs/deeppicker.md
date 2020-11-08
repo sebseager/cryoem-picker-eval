@@ -14,7 +14,7 @@ We have tested DeepPicker successfully on RHEL (Red Hat Enterprise Linux) 7.7. A
 
 ## Installation [TODO: TEST THIS SECTION]
 
-First, clone the ASPIRE repo into `pickers/deeppicker/` using 
+First, clone the DeepPicker repo into `pickers/deeppicker/` using 
 
 ```shell script
 git clone https://github.com/nejyeah/DeepPicker-python.git pickers/deeppicker
