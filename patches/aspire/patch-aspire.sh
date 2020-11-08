@@ -19,7 +19,7 @@ fi
 
 apple_dir="$1/src/aspire/apple"
 
-# exit if input is a bad clone
+# exit if /src/aspire/apple isn't an existing directory
 if [ ! -d "$apple_dir" ]; then
   echo "Bad ASPIRE-Python clone. Could not find $apple_dir"
   display_help
