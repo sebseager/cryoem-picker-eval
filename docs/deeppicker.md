@@ -65,7 +65,7 @@ Thus, the desired application is important:
 
 #### Specifics
 
-**File formatting:** DeepPicker has a very strict format of `.star` files that it can comprehend. Our script [TODO], which converts `.box` ground truth coordinate files from EMPIAR into readable `.star` files, may be of help. 
+**File formatting:** DeepPicker has a very strict format of `.star` files that it can comprehend. Our script [TODO], which converts `.box` ground truth coordinate files from EMPIAR into readable `.star` files, may be of help. For context, `.star` files are text-based file formats for storing data, essentially containing the titles and collections of data in text. 
 
 **File location:** The `.star` files *in proper format* have to be in the same folder as the micrographs they correspond to.
 
@@ -74,6 +74,7 @@ Thus, the desired application is important:
 #### Running training
 
 Assuming the aforementioned specifics are met, the following command will create a new model, with tailoring of parameters. Parameters outlined below as well.
+
 Note: Command is directory-specific for location of `train.py` and the inputDir; running the command below necessitates being in the same directory as `train.py`, otherwise specify the folder. 
 
 ```shell script
