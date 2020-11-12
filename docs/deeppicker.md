@@ -75,10 +75,10 @@ Thus, the desired application is important:
 
 Assuming the aforementioned specifics are met, the following command will create a new model, with tailoring of parameters. Parameters outlined below as well.
 
-Note: Command is directory-specific for location of `train.py` and the inputDir; running the command below necessitates being in the same directory as `train.py`, otherwise specify the folder. 
+Note: Command is directory-specific for location of `train.py` and the inputDir; running the command below necessitates being in the same directory as `train.py`, otherwise specify the folder (folder location is specified below for from cryodocs/). 
 
 ```shell script
-python train.py --train_type 1 --train_inputDir "input_dir" --particle_size ### --mrc_number -1 --particle_number -1 --coordinate_symbol 'some_string' --model_save_dir 'output_dir' --model_save_file 'output_model_name'
+python pickers/deeppicker/train.py --train_type 1 --train_inputDir "input_dir" --particle_size ### --mrc_number -1 --particle_number -1 --coordinate_symbol 'some_string' --model_save_dir 'output_dir' --model_save_file 'output_model_name'
 ```
 
 Parameters
@@ -107,10 +107,10 @@ mkdir demo_data/deeppicker_out
 ```
 
 Use the following command to pick all micrographs in `demo_data/mrc/`. A description of parameters is given below.
-Note: Command is again directory-specific for `autoPick.py`; you need to be in the same directory as autoPick.py or specify the folder location. 
+Note: Command is again directory-specific for `autoPick.py`; you need to be in the same directory as autoPick.py or specify the folder location (folder location is specified below for from cryodocs/). 
 
 ```shell script
-python autoPick.py --inputDir 'demo_data/mrc/' --pre_trained_model 'pretrained_or_created_model' --particle_size ### --mrc_number -1 --outputDir 'demo_data/deepicker_out' --coordinate_symbol 'text_indicator' --threshold 0.5
+python pickers/deeppicker/autoPick.py --inputDir 'demo_data/mrc/' --pre_trained_model 'pretrained_or_created_model' --particle_size ### --mrc_number -1 --outputDir 'demo_data/deepicker_out' --coordinate_symbol 'text_indicator' --threshold 0.5
 ```
 
 Parameters
