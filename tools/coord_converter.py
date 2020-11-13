@@ -5,6 +5,8 @@ import re
 import glob
 import csv
 from datetime import datetime
+import pandas as pd
+from collections import OrderedDict
 
 # This script converts coordinate file data between several different formats
 # The following file descriptions are supported (column labels in <angle brackets> are optional):
@@ -20,7 +22,7 @@ from datetime import datetime
 #               ordered numeric columns [corner_x, corner_y, width, height, <confidence_score>]
 #
 # Single-file modes are available for each of these formats (in which the first/designated column
-# contains the micrograph image name to which the coordinate on each row refers
+# contains the micrograph image name to which the coordinate on each row refers)
 
 class Converter:
     def __init__(self, input_path, output_path, from_format, to_format, use_single_file_input, use_single_file_output,
@@ -50,7 +52,6 @@ class Converter:
             # if not os.path.isdir(expanded_path):
             #     print("ERROR: Output path should be a directory.")
             #     sys.exit(1)
-
         return expanded_path
 
     # def read_input(self):
@@ -93,7 +94,7 @@ class Converter:
                     if line.startswith('_') and line.count('#') == 1:
                         split_line = ''.join(ln).split('#')
                         header[split_line[0]] = split_line[1]
-                    elif re.search('[0-9]', line) is not None and not line.isspace() and not line.startswith('_'):
+                    elif re.search('[0-9.]', line) is not None and not line.isspace() and not line.startswith('_'):
                         try:
                             x_index = int(header['_rlnCoordinateX'])
                             data['x'].append(float(ln[x_index - 1]))
@@ -125,7 +126,7 @@ class Converter:
             with open(file, mode='r') as f:
                 for line in f:
                     ln = line.split()
-                    if re.search('[a-zA-Z]', line) is None and not line.isspace():
+                    if re.search('[0-9.]', line) is not None and not line.isspace():
                         index_shift = 0
                         if self.use_single_file_input:
                             try:
@@ -159,7 +160,7 @@ class Converter:
             with open(file, mode='r') as f:
                 for line in f:
                     ln = line.split()
-                    if re.search('[a-zA-Z]', line) is None and not line.isspace():
+                    if re.search('[0-9.]', line) is not None and not line.isspace():
                         index_shift = 0
                         if self.use_single_file_input:
                             try:
@@ -178,7 +179,6 @@ class Converter:
                             data['conf'].append(float(ln[2 + index_shift]))
                         except IndexError:
                             pass
-
             self.input_data.append(data)
 
     # conversions
@@ -194,7 +194,7 @@ class Converter:
         elif self.use_single_file_output and not self.use_single_file_input:
             output_files = ['%s%s' % (time_str, suffix)]
             output_names = [os.path.splitext(os.path.basename(x['path']))[0] + '.mrc' for x in self.input_data]
-            print("WARN: Single-file output was requested without single-file input. Will attempt to construct "
+            print("WARN: Single-file output was requested without single-file input. Will attempt to guess "
                   "micrograph image names from the input coordinate file names.")
         elif self.use_single_file_input and not self.use_single_file_output:
             output_files = [os.path.splitext(os.path.basename(x))[0] + suffix for x in self.input_data[0]['mrc_name']]
@@ -204,10 +204,24 @@ class Converter:
             output_names = []
         self.output_paths = [os.path.join(self.output_dir, x) for x in output_files]
         if any([os.path.isfile(x) for x in self.output_paths]) and not self.can_overwrite:
-            print("ERROR: Files ending in '%s' in this directory will be overwritten. "
+            print("ERROR: Some files in the specified output directory will be overwritten. "
                   "To confirm, run coord_converter.py again with the --overwrite flag.")
             sys.exit(1)
 
+        # if self.use_single_file_input, we need a conversion layer from original large dict to list of one dict per mrc
+        if self.use_single_file_input:
+            # with use_single_file_input, there will be duplicate output_paths; remove them while preserving order
+            self.output_paths = list(OrderedDict.fromkeys(self.output_paths))
+            input_path = self.input_data[0]['path']
+            df = pd.DataFrame(*self.input_data)
+            grouped = df.groupby('mrc_name')
+            if 'conf' in df:
+                self.input_data = [{'path': input_path, 'x': group['x'].tolist(), 'y': group['y'].tolist()}
+                                   for name, group in grouped]
+            else:
+                self.input_data = [{'path': input_path, 'x': group['x'].tolist(), 'y': group['y'].tolist(),
+                                    'conf': group['conf'].tolist()} for name, group in grouped]
+        print(self.input_data)
         if self.to_format in ['star']:
             self.convert_to_star(output_names)
         elif self.to_format in ['box']:
@@ -228,7 +242,7 @@ class Converter:
             except KeyError as e:
                 print("ERROR: Required fields not present in input (%s format).\n%s" % (self.from_format, e))
                 sys.exit(1)
-            if self.use_single_file_output:
+            if self.use_single_file_output:  # in this case output_names will not be []
                 rows = zip(*self.even_jagged_arr(output_names, *zip(*rows)))
             with open(file, "w") as f:
                 header_str = 'data_\n\nloop_\n_rlnCoordinateX #1\n_rlnCoordinateY #2\n'
