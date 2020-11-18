@@ -184,7 +184,7 @@ class Converter:
     # conversions
 
     def convert_input(self):
-        suffix = '_%s.%s' % (self.output_suffix, self.to_format)
+        suffix = '%s.%s' % (self.output_suffix, self.to_format)
         time_str = str(datetime.strftime(datetime.now(), '%y%m%d_%H%M%S'))
         # output_files are the filenames where generated coordinates will be written
         # output_names are the image names to use in the generated files if self.use_single_file_output was requested
@@ -221,7 +221,7 @@ class Converter:
             else:
                 self.input_data = [{'path': input_path, 'x': group['x'].tolist(), 'y': group['y'].tolist(),
                                     'conf': group['conf'].tolist()} for name, group in grouped]
-        print(self.input_data)
+
         if self.to_format in ['star']:
             self.convert_to_star(output_names)
         elif self.to_format in ['box']:
