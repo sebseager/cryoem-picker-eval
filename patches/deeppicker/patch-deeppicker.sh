@@ -17,4 +17,5 @@ if [ ! -d "$1" ]; then
   display_help
 fi
 
-find "$1" -name '*.py' ! -type d -exec bash -c 'expand -t 4 "$0" > "$0".tmp && mv -v "$0".tmp "$0"' {} \;
+self_dir=$(dirname "$0")
+cp -v "$self_dir"/{autoPick.py,dataLoader.py,deepModel.py,starReader.py} "$1"

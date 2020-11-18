@@ -20,7 +20,7 @@ First, clone the DeepPicker repo into `pickers/deeppicker/` using
 git clone https://github.com/nejyeah/DeepPicker-python.git pickers/deeppicker
 ```
 
-In some cases, we have found that DeepPicker may not run properly as-is. If you would like to apply our patches to DeepPicker, run the script included in `cryo-docs/patches/deeppicker`. This script will make changes to all `*.py` files in the directory passed to it (`pickers/deeppicker/` in this case).
+In some cases, we have found that DeepPicker may not run properly as-is. If you would like to apply our patches to DeepPicker, run the script included in `cryo-docs/patches/deeppicker`. This script will replace several DeepPicker source files with our patched versions (keeping the others as cloned in the previous step).
 
 ```shell script
 sh patches/deeppicker/patch-deeppicker.sh pickers/deeppicker/
