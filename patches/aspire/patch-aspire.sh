@@ -1,7 +1,7 @@
 #!/bin/bash
 
 display_help() {
-  echo "Syntax: patch-aspire.sh <path/to/ASPIRE-Python>"
+  echo "Syntax: patch-aspire.sh <path/to/ASPIRE_clone>"
   echo
   exit 1
 }
@@ -26,7 +26,4 @@ if [ ! -d "$apple_dir" ]; then
 fi
 
 self_dir=$(dirname "$0")
-
-cp -v "$self_dir/apple.py" "$apple_dir"
-cp -v "$self_dir/helper.py" "$apple_dir"
-cp -v "$self_dir/picking.py" "$apple_dir"
+cp -v "$self_dir"/{apple.py,helper.py,picking.py} "$apple_dir"
