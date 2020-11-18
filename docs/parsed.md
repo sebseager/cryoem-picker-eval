@@ -70,7 +70,7 @@ Parameters
 - `--model`: pre-trained segmentation model
 - `--data_path`: path to directory of input micrographs
 - `--output_path`: path to output directory
-- `--file_pattern`: RegEx (Regular Expression)-like pattern that describes the filenames of the micrographs to be picked (e.g., `*.mrc` includes only files ending in `.mrc`)
+- `--file_pattern`: regex (regular expression)-like pattern that describes the filenames of the micrographs to be picked (e.g., `*.mrc` includes only files ending in `.mrc`)
 - `--job_suffix`: suffix to be appended to the filenames of the output coordinate files (e.g., the input micrograph `Falcon_2012_06_12-15_27_22_0.mrc` would correspond with an output coordinate file named `Falcon_2012_06_12-15_27_22_0_autopick.star`)
 - `--angpixel`: sample rate (pixel resolution) for specified micrographs (in Å/pixel)
 - `--img_size`: either the width or height of the micrograph in pixels—whichever is larger

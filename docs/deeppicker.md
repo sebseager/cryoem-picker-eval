@@ -12,7 +12,7 @@ We have tested DeepPicker successfully on RHEL (Red Hat Enterprise Linux) 7.7. A
 
 > it only supports Ubuntu 12.0+, centOS 7.0+, and RHEL 7.0+
 
-## Installation [TODO: TEST THIS SECTION]
+## Installation
 
 First, clone the DeepPicker repo into `pickers/deeppicker/` using 
 
@@ -49,7 +49,7 @@ conda install tensorflow-gpu=#.##.##
 
 Note that `conda search tensorflow-gpu` can be used to see which versions of `tensorflow-gpu` are available with conda. If the version you would like to install is not available in your conda channels, you can either specify a different channel or install everything manually with `pip`—see [release history](https://pypi.org/project/tensorflow-gpu/#history) for `tensorflow-gpu`.
 
-## Usage
+## Usage [TODO: TEST THIS SECTION]
 
 ### Overview
 
@@ -78,7 +78,7 @@ Assuming the aforementioned specifics are met, the following command will create
 Note: Command is directory-specific for location of `train.py` and the inputDir; running the command below necessitates being in the same directory as `train.py`, otherwise specify the folder (folder location is specified below for from cryodocs/). 
 
 ```shell script
-python pickers/deeppicker/train.py --train_type 1 --train_inputDir "input_dir" --particle_size ### --mrc_number -1 --particle_number -1 --coordinate_symbol 'some_string' --model_save_dir 'output_dir' --model_save_file 'output_model_name'
+python pickers/deeppicker/train.py --train_type 1 --train_inputDir "input_dir" --particle_size 160 --mrc_number -1 --particle_number -1 --coordinate_symbol 'some_string' --model_save_dir 'output_dir' --model_save_file 'output_model_name'
 ```
 
 Parameters
@@ -110,7 +110,7 @@ Use the following command to pick all micrographs in `demo_data/mrc/`. A descrip
 Note: Command is again directory-specific for `autoPick.py`; you need to be in the same directory as autoPick.py or specify the folder location (folder location is specified below for from cryodocs/). 
 
 ```shell script
-python pickers/deeppicker/autoPick.py --inputDir 'demo_data/mrc/' --pre_trained_model 'pretrained_or_created_model' --particle_size ### --mrc_number -1 --outputDir 'demo_data/deepicker_out' --coordinate_symbol 'text_indicator' --threshold 0.5
+python pickers/deeppicker/autoPick.py --inputDir 'demo_data/mrc/' --pre_trained_model 'pretrained_or_created_model' --particle_size  --mrc_number -1 --outputDir 'demo_data/deepicker_out' --coordinate_symbol 'text_indicator' --threshold 0.5
 ```
 
 Parameters
