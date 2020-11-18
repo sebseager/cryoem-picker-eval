@@ -18,4 +18,4 @@ if [ ! -d "$1" ]; then
 fi
 
 self_dir=$(dirname "$0")
-cp -v "$self_dir"/{autoPick.py,dataLoader.py,deepModel.py,starReader.py} "$1"
+cp -v "$self_dir"/{autoPick.py,dataLoader.py,deepModel.py,starReader.py,train.py} "$1"
