@@ -110,7 +110,7 @@ Use the following command to pick all micrographs in `demo_data/mrc/`. A descrip
 Note: Command is again directory-specific for `autoPick.py`; you need to be in the same directory as autoPick.py or specify the folder location (folder location is specified below for from cryodocs/). 
 
 ```shell script
-python pickers/deeppicker/autoPick.py --inputDir 'demo_data/mrc/' --pre_trained_model 'pretrained_or_created_model' --particle_size  --mrc_number -1 --outputDir 'demo_data/deepicker_out' --coordinate_symbol 'text_indicator' --threshold 0.5
+python pickers/deeppicker/autoPick.py --inputDir 'demo_data/mrc/' --pre_trained_model 'pretrained_or_created_model' --particle_size 176 --mrc_number -1 --outputDir 'demo_data/deepicker_out' --coordinate_symbol '_dp' --threshold 0.5
 ```
 
 Parameters
