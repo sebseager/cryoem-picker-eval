@@ -427,8 +427,8 @@ def track_part(pred_test, downMap, mediumName, \
     SkipPickNum = 0
 
 
-    with open('./%s/%s_%s.star' %(output_PATH , nameC[:-4] , job_suffix), 'w') as coorF:
-        coorFa = open('./%s/%s_%s_param.star' %(output_PATH , nameC[:-4] , job_suffix), 'w')
+    with open('%s/%s_%s.star' %(output_PATH , nameC[:-4] , job_suffix), 'w') as coorF:  # SJHS; removed leading ./
+        coorFa = open('%s/%s_%s_param.star' %(output_PATH , nameC[:-4] , job_suffix), 'w')  # SJHS; removed leading ./
         coorTrack = coorTrackPY.copy()#[['x','y']]
         # STAR HEADING
         coorF.write( header )
@@ -629,12 +629,12 @@ def void_picking(optionsk,argsk):
     print('Coordinates extraction finished\t\t%8d TotalPickNum found' %TotalPickNum)
     
     # record picking parameters info
-    with open('./%s/%s_columns.star' %(output_PATH , job_suffix), 'w') as coorFb:
+    with open('%s/%s_columns.star' %(output_PATH , job_suffix), 'w') as coorFb:  # SJHS; removed leading ./
         for item in list(['x' 'y' 'mass' 'size' 'ecc' 'signal' 'raw_mass' 'ep']+['prob' + 'mask']):#list(coorTrackPY.columns.values):
             coorFb.write('%s\t' %item)
             
     # record checkpoint time
-    with h5py.File('./%s/%s_%s.h5' %(output_PATH , 'timeseries' , job_suffix), 'w') as h5t:
+    with h5py.File('%s/%s_%s.h5' %(output_PATH , 'timeseries' , job_suffix), 'w') as h5t:  # SJHS; removed leading ./
         h5t['begin'] = np.asarray(timeseries_begin)
         h5t['end1'] = np.asarray(timeseries_end1)
         h5t['end2'] = np.asarray(timeseries_end2)
@@ -737,8 +737,9 @@ if __name__ == '__main__':
                 os.environ["CUDA_VISIBLE_DEVICES"] = global_options.gpu_id
             # keras/tf
             # limit tf memory usage
-            import tensorflow.compat.v1 as tf  # SJHS
-            tf.disable_v2_behavior()  # SJHS
+            import tensorflow as tf  # SJHS; compat not needed if already using tensorflow v1
+            # import tensorflow.compat.v1 as tf  # SJHS
+            # tf.disable_v2_behavior()  # SJHS
 
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
             config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)

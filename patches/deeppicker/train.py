@@ -8,7 +8,7 @@ import time
 
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1 as tf  # SJHS
 from optparse import OptionParser
 
 from deepModel import DeepModel

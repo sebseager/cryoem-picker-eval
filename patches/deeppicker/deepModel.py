@@ -12,9 +12,10 @@ import sys
 import tarfile
 
 from PIL import Image
-from six.moves import urllib
-import tensorflow as tf
+from six.moves import urllib, xrange  # SJHS; xrange added
+import tensorflow.compat.v1 as tf  # SJHS
 import numpy as np
+
 
 # image data constants information
 class DeepModel(object):
@@ -28,6 +29,8 @@ class DeepModel(object):
         self.num_row = model_input_size[2]
         self.num_channel = model_input_size[3]
         self.num_class = num_class
+
+        tf.disable_eager_execution()  # SJHS
 
     def init_learning_rate(self, learning_rate = 0.01, learning_rate_decay_factor = 0.95, decay_steps = 400, staircase = True):
         self.learning_rate = learning_rate
@@ -48,7 +51,7 @@ class DeepModel(object):
         var = tf.get_variable(name, shape,
                         initializer = tf.truncated_normal_initializer(stddev=stddev, seed = 1234))
         if wd is not None:
-            weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
+            weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')  # SJHS; tf.mul deprecated
             tf.add_to_collection('losses',weight_decay)
         return var
 

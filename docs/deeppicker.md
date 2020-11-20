@@ -29,7 +29,7 @@ sh patches/deeppicker/patch-deeppicker.sh pickers/deeppicker/
 Create and activate a new conda environment using Python version 3.6 (since `tensorflow` versions 1.12.0 and earlier do not support Python 3.7).
 
 ```shell script
-conda create -n deeppicker matplotlib scipy python=3.6
+conda create -n deeppicker matplotlib scipy==1.2.1 python=3.6
 conda activate deeppicker
 ```
 

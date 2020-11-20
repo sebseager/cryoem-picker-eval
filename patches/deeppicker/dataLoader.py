@@ -9,7 +9,7 @@ from matplotlib.patches import Ellipse, Circle
 import matplotlib.pyplot as plt
 import scipy.misc
 import scipy.ndimage
-import tensorflow as tf
+import tensorflow.compat.v1 as tf  # SJHS
 import random
 from operator import itemgetter, attrgetter
 from matplotlib import pyplot as plt

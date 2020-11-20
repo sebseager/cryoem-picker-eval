@@ -10,7 +10,7 @@ import re
 import pickle
 import numpy as np
 from optparse import OptionParser
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1 as tf  # SJHS
 
 from deepModel import DeepModel
 from autoPicker import AutoPicker
