@@ -40,8 +40,10 @@ Inputs
 - picking aperture size, micrograph pixel resolution, and other configurable parameters
 - general model `*.h5` file
 
-Outputs
-- directory containing `*.star` coordinate files
+Outputs (in a single directory)
+- `*.star` coordinate files (for context, `.star` files are text-based file formats for storing data, essentially containing the titles and collections of data in text)
+- `*.star` extended parameter files (containing coordinates, but also blob mass and other data)
+- `*.h5` data files (not used)
 
 ### Pick using pretrained model
 
