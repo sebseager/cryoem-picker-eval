@@ -28,7 +28,7 @@ conda activate parsed
 Install any additional dependencies (not directly available through conda) with `pip`. In doing so, however, it is important that we use the `pip` executable that was just installed in the conda environment created above. To verify this, check that running `which pip` outputs something like `/path/to/conda_envs/parsed/bin/pip`. If not, try restarting your shell session or running `conda deactivate parsed` followed by `conda activate parsed` before proceeding.
 
 ```shell script
-pip install opencv-python
+pip install opencv-python==3.1.*
 ```
 
 ## Usage
