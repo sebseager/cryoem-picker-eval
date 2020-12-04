@@ -1,6 +1,7 @@
 ---
 layout: default
-title: Cryo-EM Particle Picker Docs
+title: Home
+nav_order: 1
 ---
 
 # Cryo-EM Particle Picker Docs
@@ -8,12 +9,7 @@ title: Cryo-EM Particle Picker Docs
 ## Table of Contents
 
 - [Introduction](#introduction) (this document)
-- Particle picker guides [TODO: ADD OTHERS WHEN DONE]
-    - [ASPIRE-APPLEpicker](aspire-apple.md)
-    - [DeepPicker](deeppicker.md)
-    - [PARSED](parsed.md)
-    - [SPHIRE-crYOLO](sphire-cryolo.md)
-    - [Topaz](topaz.md)
+- [Particle picker guides](pickers)
 - Miscellaneous
     - [EMPIAR usage guide](empiar.md)
 

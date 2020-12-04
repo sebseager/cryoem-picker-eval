@@ -1,3 +1,8 @@
+---
+layout: default
+parent: Particle Pickers
+---
+
 # ASPIRE APPLEpicker
 
 ## Summary
