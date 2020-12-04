@@ -1,3 +1,8 @@
+---
+layout: default
+parent: Particle Pickers
+---
+
 # RELION LoG (Laplacian-of-Gaussian) Picker
 
 ## Summary and Installation

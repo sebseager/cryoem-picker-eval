@@ -1,3 +1,8 @@
+---
+layout: default
+parent: pickers
+---
+
 # PARSED
 
 ## Summary
