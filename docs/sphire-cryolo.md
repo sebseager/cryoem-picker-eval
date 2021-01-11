@@ -203,11 +203,11 @@ Use a command below according to your intended training method. These commands s
 
 Note that it is possible to run method 3 below (training from scratch) using configuration method [2](#method-2-refine-the-general-model-to-your-data) above. This allows the new model's weights to be initialized closer (potentially) to the values they ought to end up at, while still performing "from scratch" training (*not* refinement).
 
-| Method                      | Sample command                                                                            |
-|-----------------------------|-------------------------------------------------------------------------------------------|
-| 1. General model as-is      | N/A (no training required)                                                                |
-| 2. General model refinement | `cryolo_train.py -c demo_data/cryolo_out/cryolo_config.json -w 0 -g 0 --fine_tune -lft 2` |
-| 3. Training from scratch    | `cryolo_train.py -c demo_data/cryolo_out/cryolo_config.json -w 5 -g 0`                    |
+| Method                      | Sample command                                                               |
+|-----------------------------|------------------------------------------------------------------------------|
+| 1. General model as-is      | N/A (no training required)                                                   |
+| 2. General model refinement | `cryolo_train.py -c path/to/cryolo_config.json -w 0 -g 0 --fine_tune -lft 2` |
+| 3. Training from scratch    | `cryolo_train.py -c path/to/cryolo_config.json -w 5 -g 0`                    |
 
 The `-w` flag sets the number of warmup epochs, and must be zero when using `--fine_tune` (for model refinement). The `-lft` flag sets the number of layers to fine tune, for which the authors recommend a default of 2. The `-g` flag indicates the GPU ID(s) to be used in training. On an NVIDIA-based system, use the `nvidia-smi` command to get a list of available GPUs and their IDs. Specify multiple GPUs with something like `-g '0 1 2'`.
 
