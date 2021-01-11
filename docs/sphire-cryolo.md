@@ -195,7 +195,13 @@ cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --train_image_f
 
 *Note: this section only applies to configuration methods [2](#method-2-refine-the-general-model-to-your-data) and [3](#method-3-train-your-own-model-from-scratch) above.*
 
-Use a command below according to your intended training method. Note that it is possible to run method 3 below (training from scratch) using configuration method [2](#method-2-refine-the-general-model-to-your-data) above. This allows the new model's weights to be initialized closer (potentially) to the values they ought to end up at, while still performing "from scratch" training (*not* refinement).
+Use a command below according to your intended training method. These commands save their output in the current working directory, so to keep everything organized, they can be run as follows:
+
+```shell script
+(cd demo_data/cryolo_out/ && INSERT_COMMAND_HERE)
+```
+
+Note that it is possible to run method 3 below (training from scratch) using configuration method [2](#method-2-refine-the-general-model-to-your-data) above. This allows the new model's weights to be initialized closer (potentially) to the values they ought to end up at, while still performing "from scratch" training (*not* refinement).
 
 | Method                      | Sample command                                                                            |
 |-----------------------------|-------------------------------------------------------------------------------------------|
