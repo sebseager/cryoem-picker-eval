@@ -179,7 +179,7 @@ cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --train_image_f
 To allow crYOLO to separate automatically a random 20% of the training set for use as a validation set (default), run
 
 ```shell script
-cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --train_image_folder demo_data/train_mrc/ --train_annot_folder demo_data/train_coord/
+(cd demo_data/cryolo_out/ && cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --train_image_folder ../train_mrc/ --train_annot_folder ../train_coord/)
 ```
 
 Otherwise, to specify validation images and their corresponding coordinate files, make new directories `demo_data/valid_mrc/` and `demo_data/valid_coord/`, populate them with micrographs and box files accordingly, and run the configuration command.

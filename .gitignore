@@ -1,0 +1,7 @@
+docs/.bundle
+docs/vendor
+docs/.sass-cache/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/Gemfile.lock
+.DS_Store
