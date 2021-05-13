@@ -61,7 +61,7 @@ When switching between different conda environments, we will use `conda activate
 source /path/to/miniconda#/bin/activate /path/to/conda_envs/my_environment_name
 ``` 
 
-If the `conda activate` or `conda deactive` commands do not work, you will need to add the conda executable to your `PATH` environment variable. To allow conda to run its built-in setup automatically, use
+If the `conda activate` or `conda deactivate` commands do not work, you will need to add the conda executable to your `PATH` environment variable. To allow conda to run its built-in setup automatically, use
 
 ```shell script
 /path/to/miniconda#/bin/conda init
