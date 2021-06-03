@@ -44,9 +44,10 @@ Low-pass filtered:
 wget ftp://ftp.gwdg.de/pub/misc/sphire/crYOLO-GENERAL-MODELS/gmodel_phosnet_202005_N63_c17.h5
 ```
 
-Neural-network (JANNI) denoised:
+Neural-network (JANNI) denoised (the older general model from the GitHub link is used for the `--janni-model` argument, while the newer file is used for `--pretrained-weights`):
 
 ```shell script
+wget https://github.com/MPI-Dortmund/sphire-janni/raw/master/janni_general_models/gmodel_janni_20190703.h5
 wget ftp://ftp.gwdg.de/pub/misc/sphire/crYOLO-GENERAL-MODELS/gmodel_phosnet_202005_nn_N63_c17.h5
 ```
 
@@ -146,7 +147,7 @@ Use one of these commands to generate a configuration file.
 | Model               | Sample command                                                                                                          |
 |---------------------|-------------------------------------------------------------------------------------------------------------------------|
 | Phosaurus low-pass* | `cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --filter LOWPASS --low_pass_cutoff 0.1`               |
-| JANNI-denoised**    | `cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --filter JANNI --janni_model /path/to/janni_model.h5` |
+| JANNI-denoised**    | `cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --filter JANNI --janni_model /path/to/gmodel_janni_20190703.h5` |
 | Negative stain      | `cryolo_gui.py config demo_data/cryolo_out/cryolo_config.json 220 --filter NONE`                                        |
 
 *\* The* `low_pass_cutoff` *can be changed to anything between 0 and 0.5 inclusive, but 0.1 is the default*
