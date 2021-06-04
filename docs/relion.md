@@ -224,4 +224,6 @@ If the Volume Viewer window is not already open, open it via `Tools > Volume Dat
 
 #### Refine3D/job009
 
-
+| Tab | Parameter | Value | Notes |
+| --- | --- | --- | --- |
+| Running | Number of MPI procs | 3 |
