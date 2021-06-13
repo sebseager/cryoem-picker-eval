@@ -93,8 +93,10 @@ CTF ([Contrast Transfer Function](https://en.wikipedia.org/wiki/Contrast_transfe
 | CTFFIND-4.1 | Use CTFFIND-4.1 | Yes | In this example, CTFFIND is used instead of Gctf |
 | CTFFIND-4.1 | CTFFIND-4.1 executable | ??? | Path to the `ctffind` binary |
 | Running* | Number of MPI procs | 5 |
-
-*Recommended compute resources: CPU node, ≥ 5G memory
+| Running | Submit to queue? | (Yes/No) | If you have private partitions available, change to `Yes` for RELION to automatically request the required computing resources.
+| Running | Queue name | ??? | If `Submit to queue?` is `Yes`, for Gerstein, use `pi_gerstein_gpu`.
+| Running | Queue submit command | ??? | If `Submit to queue?` is `Yes`, for all of Farnam using SLURM, use `sbatch`.
+*Recommended compute resources: CPU node, ≥ 5G memory.
 
 Optionally, you may wish to inspect the CTF-corrected micrographs via `Display > out: micrographs_ctf.star`. Wait for a popup with display parameters to appear, change `Scale` and the sort options as needed, and click `Display!`. If any CTF-corrected micrographs look vastly different from the rest (distortions, etc.), you may wish to filter these out via [Subset Selection](#subset-selection). If not, feel free to proceed to [Particle Extraction](#particle-extraction)
 
