@@ -7,7 +7,7 @@ parent: Particle Pickers
 
 ## Summary
 
-AutoCryoPicker is available as a [GitHub Repo](https://github.com/jianlin-cheng/AutoCryoPicker), as a matlab application. We used Matlab 2017b for running all commands.
+AutoCryoPicker is built for MATLAB and is available as a [GitHub repo](https://github.com/jianlin-cheng/AutoCryoPicker). We ran it in MATLAB 2017b.
 
 ## Installation
 

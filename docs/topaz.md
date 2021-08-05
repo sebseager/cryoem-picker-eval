@@ -81,7 +81,7 @@ For reference, the training tab of the [Topaz GUI](https://emgweb.nysbc.org/topa
 For example, if the original micrograph resolution was 1.2 Å/pix, a downsampling factor of 5 would bring the preprocessed micrograph's resolution to 6 Å/pix. The preprocessing command would be as follows.
 
 ```shell script
-topaz preprocess -s 6 -o demo_data/topaz_out/processed/micrographs/ demo_data/mrc/*.mrc
+topaz preprocess -s 5 -o demo_data/topaz_out/processed/micrographs/ demo_data/mrc/*.mrc
 ```
 
 Topaz has two primary picking strategies: using the [pretrained general model](#method-1-use-pretrained-general-model-as-is), or [training a new model](#method-2-train-a-model-from-scratch) (optionally initialized with pretrained weights).
@@ -91,7 +91,7 @@ Topaz has two primary picking strategies: using the [pretrained general model](#
 The `extract` command takes input and output paths, as well two numerical parameters. The `-r` parameter should be set to the radius of the particle you would like to pick. It is recommended that this be kept relatively small (as appropriate for your particle), as Topaz will not pick particles any closer than this to prevent multiple detections per particle. The `-x` parameter will upscale the resulting picks to the original micrograph, and should be the same as `-s` from `topaz preprocess`.
 
 ```shell script
-topaz extract -r 14 -x 6 -o demo_data/topaz_out/predicted_particles_all_upsampled.txt demo_data/topaz_out/processed/micrographs/*.mrc
+topaz extract -r 14 -x 5 -o demo_data/topaz_out/predicted_particles_all_upsampled.txt demo_data/topaz_out/processed/micrographs/*.mrc
 ```
 
 ### Method 2: Train a model from scratch
@@ -141,7 +141,7 @@ See `topaz train --help` for more detailed explanations of the arguments.
 This trained model can now be used to extract particles. In the following command, the `-r` parameter should be set to the radius of the particle you would like to pick. It is recommended that this be kept relatively small (as appropriate for your particle), as Topaz will not pick particles any closer than this to prevent multiple detections per particle. The `-x` parameter will upscale the resulting picks to the original micrograph, and should be the same as `-s` from `topaz preprocess`. The `-m` parameter should point to the last epoch of the model trained above.
 
 ```shell script
-topaz extract -r 14 -x 6 -m demo_data/topaz_out/saved_models/model_epoch10.sav \
+topaz extract -r 14 -x 5 -m demo_data/topaz_out/saved_models/model_epoch10.sav \
               -o demo_data/topaz_out/predicted_particles_all_upsampled.txt \
               demo_data/topaz_out/processed/micrographs/*.mrc
 ```
