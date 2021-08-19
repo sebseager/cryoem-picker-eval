@@ -7,7 +7,7 @@ parent: Particle Pickers
 
 ## Summary
 
-AutoCryoPicker is built for MATLAB and is available as a [GitHub repo](https://github.com/jianlin-cheng/AutoCryoPicker). We ran it in MATLAB 2017b.
+AutoCryoPicker is built for MATLAB and is available as a [GitHub repo](https://github.com/jianlin-cheng/AutoCryoPicker). We ran it in MATLAB 2020b.
 
 ## Installation
 
@@ -17,6 +17,23 @@ First, clone the AutoCryoPicker repo into `pickers/autocryopicker/` using
 git clone https://github.com/jianlin-cheng/AutoCryoPicker.git pickers/autocryopicker
 ```
 
-In some cases, AutoCryoPicker is very slow in running, due to loading many picture files during the particle picking process. If you would like to speed it up, we have
-a patch under `cryo-docs/patches/deeppicker` to remove these pictures. This script will replace several AutoCryoPicker source files with our patched versions (keeping 
-the others as cloned in the previous step).
+As is, AutoCryoPicker produces detections for its own intensity-based clustering (IBC) approach, as well as for k-means and fuzzy c-means clustering algorithms (for comparison purposes). It also does not output particle centers, radii, or confidence metrics by default.
+
+To apply our patch, replace the `AutoPicker_Final_Demo.m` file in the `Signle Particle Detection_Demo` [sic] directory with our version as follows:
+
+```shell script
+sh patches/autocryopicker/patch_autocryopicker.sh pickers/autocryopicker/
+```
+
+## Usage
+
+Before running AutoCryoPicker, `.mrc` micrograph files must be converted to a `.png` format. [TODO: add link to script to do this (message me for this for now)]
+
+Assuming the MATLAB executable is available at the `matlab` command, use the following to run AutoCryoPicker on a single micrograph:
+
+```shell script
+mrc=path/to/mrc.png
+matlab -nosplash -nodisplay -r "mrc='$mrc';AutoPicker_Final_Demo" -logfile "${mrc%.png}.box"
+```
+
+[TODO: in shell above get rid of anything before AUTOCRYOPICKER_DETECTIONS_START]
