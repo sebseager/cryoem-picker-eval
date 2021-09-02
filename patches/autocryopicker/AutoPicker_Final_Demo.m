@@ -175,8 +175,8 @@ close all;
         y1=y-r;
         rectangle('Position', [x1 y1 2*r 2*r],'EdgeColor','g','LineWidth',2 );
 
-        % PATCHED
-        disp([num2str(x1) 9 num2str(y1) 9 num2str(2*r) 9 num2str(2*r) 9 num2str(metric1(k,1))]);
+        % PATCHED - mult everything by 2 to upscale coords
+        disp([num2str(x1*2) 9 num2str(y1*2) 9 num2str(2*r*2) 9 num2str(2*r*2) 9 num2str(metric1(k,1))]);
     end
 
     % PATCHED - stop execution here to avoid writing everything else to stdout

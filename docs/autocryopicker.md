@@ -32,8 +32,8 @@ Before running AutoCryoPicker, `.mrc` micrograph files must be converted to a `.
 Assuming the MATLAB executable is available at the `matlab` command, use the following to run AutoCryoPicker on a single micrograph:
 
 ```shell script
-mrc=path/to/mrc.png
-matlab -nosplash -nodisplay -r "mrc='$mrc';AutoPicker_Final_Demo" -logfile "${mrc%.png}.box"
+png_file=path/to/mrc.png
+out_name=$(basename $png_file); matlab -nosplash -nodisplay -r "mrc='$png_file';AutoPicker_Final_Demo" -logfile "${out_name%.png}.box"
 ```
 
 [TODO: in shell above get rid of anything before AUTOCRYOPICKER_DETECTIONS_START]
