@@ -10,20 +10,22 @@ import pickle
 from collections import OrderedDict
 
 # This script converts coordinate file data between several different formats
-# The following file descriptions are supported (column labels in <angle brackets> are optional):
+# The following file descriptions are supported
+# (column labels in <angle brackets> are optional):
 #
 #  - tsv|coord: one tsv per mrc
 #               optional non-numeric header (ignored)
-#               ordered numeric columns [center_x, center_y, <confidence_score>]
+#               ordered numeric cols [center_x, center_y, <conf_score>]
 #  - star:      one tsv per mrc
 #               RELION loop header
-#               unordered numeric columns [rlnCoordinateX, rlnCoordinateY, <FigureOfMerit>]
+#               unordered numeric cols [rlnCoordinateX, rlnCoordinateY, <FigureOfMerit>]
 #  - box|cbox:  one tsv per mrc
 #               optional non-numeric header (ignored)
-#               ordered numeric columns [corner_x, corner_y, width, height, <confidence_score>]
+#               ordered numeric cols [corner_x, corner_y, width, height, <conf_score>]
 #
-# Single-file modes are available for each of these formats (in which the first/designated column
-# contains the micrograph image name to which the coordinate on each row refers)
+# Single-file modes are available for each of these formats (in which the
+# first/designated column contains the micrograph image name to which the coordinate
+# on each row refers)
 
 
 class Converter:

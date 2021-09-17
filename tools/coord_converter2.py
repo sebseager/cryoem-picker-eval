@@ -173,10 +173,19 @@ def df_to_star(df, col_names, out_dir, name, do_overwrite=False):
     if out_path.exists() and not do_overwrite:
         _log("re-run with the overwrite flag to replace existing files", 2)
 
+    df_cols = list(df.columns)
     star_loop = "data_\n\nloop_\n"
-    for col in col_names.values():
-        idx = list(df.columns).index(col)
-        star_loop += f"{col} #{idx + 1}\n"
+    for col, col_name in col_names.items():
+        if col_name is None:
+            continue
+        try:
+            idx = df_cols.index(col)
+            star_loop += f"{col_name} #{idx + 1}\n"
+        except ValueError:
+            # _log(f"could not find data for STAR column ({e})", 1)
+            # import pdb
+            # pdb.set_trace()
+            pass
 
     with open(out_path, "w") as f:
         f.write(star_loop)
@@ -569,43 +578,52 @@ def process_conversion(
     cols,
     suffix,
     single_out,
+    multi_out,
     do_overwrite,
 ):
 
     # read input files into dataframes
     dfs = {}
+    AUTO = "auto"
     if in_fmt == "star":
+        default_cols = {
+            "x": STAR_COL_X,
+            "y": STAR_COL_Y,
+            "w": None,
+            "h": None,
+            "conf": STAR_COL_C,
+            "name": STAR_COL_N,
+        }
         dfs = {Path(p).stem: star_to_df(p) for p in paths}
-        cols["x"] = STAR_COL_X if cols["x"] is None else cols["x"]
-        cols["y"] = STAR_COL_Y if cols["y"] is None else cols["y"]
-        cols["conf"] = STAR_COL_C if cols["conf"] is None else cols["conf"]
-        cols["name"] = STAR_COL_N if cols["name"] is None else cols["name"]
     elif in_fmt == "box":
+        default_cols = {"x": 0, "y": 1, "w": 2, "h": 3, "conf": 4, "name": None}
         dfs = {Path(p).stem: tsv_to_df(p) for p in paths}
-        cols["x"] = 0 if cols["x"] is None else cols["x"]
-        cols["y"] = 1 if cols["y"] is None else cols["y"]
-        cols["w"] = 2 if cols["w"] is None else cols["w"]
-        cols["h"] = 3 if cols["h"] is None else cols["h"]
-        cols["conf"] = 4 if cols["conf"] is None else cols["conf"]
-        cols["name"] = 5 if cols["name"] is None else cols["name"]
     elif in_fmt == "tsv":
+        default_cols = {"x": 0, "y": 1, "w": None, "h": None, "conf": 2, "name": None}
         dfs = {Path(p).stem: tsv_to_df(p) for p in paths}
-        cols["x"] = 0 if cols["x"] is None else cols["x"]
-        cols["y"] = 1 if cols["y"] is None else cols["y"]
-        cols["conf"] = 2 if cols["conf"] is None else cols["conf"]
-        cols["name"] = 3 if cols["name"] is None else cols["name"]
+
+    # apply any default cols needed
+    for k, v in default_cols.items():
+        cols[k] = v if cols[k] == AUTO else cols[k]
+
+    _log(f"using the following input column mapping:\n  {cols}", 0, verbose=True)
 
     out_dfs = {}
     for name, df in dfs.items():
         # rename columns to make conversion logic easier
-        df = df.rename(
-            columns={
-                (df.columns[v] if _is_int(v) else v): k
-                for k, v in cols.items()
-                if v is not None
-                and (v < len(df.columns) if _is_int(v) else v in df.columns)
-            }
-        )
+        rename_dict = {}
+        for new_name, cur_name in cols.items():
+            if cur_name is None:
+                continue
+            if _is_int(cur_name):
+                cur_name = int(cur_name)
+                if cur_name in range(len(df.columns)):
+                    rename_dict[df.columns[cur_name]] = new_name
+            else:
+                if cur_name in df.columns:
+                    rename_dict[cur_name] = new_name
+
+        df = df.rename(columns=rename_dict)
 
         # modify coordinates for output format if needed
         try:
@@ -618,7 +636,9 @@ def process_conversion(
                 df["x"] = df["x"] + df["w"].div(2)
                 df["y"] = df["y"] + df["h"].div(2)
         except KeyError as e:
-            _log(f"could not find expected column in input ({e})", 2)
+            _log(f"did not find column {e} in input columns ({list(df.columns)})", 2)
+        except TypeError as e:
+            _log(f"unexpected type in input column(s) ({list(df.columns)})", 2)
 
         if out_fmt in ("star", "tsv"):
             out_cols = ["x", "y", "conf", "name"]
@@ -630,11 +650,18 @@ def process_conversion(
     if single_out:
         out_dfs = {"all_coords": pd.concat(out_dfs, ignore_index=True)}
 
+    if multi_out:
+        if all("name" in df.columns for df in out_dfs.values()):
+            grouped_by_mrc = pd.concat(out_dfs, ignore_index=True).groupby("name")
+            out_dfs = {k: df.drop("name", axis=1) for k, df in grouped_by_mrc}
+        else:
+            _log("cannot fulfill multi_out without micrograph name information", 1)
+
     for name, df in out_dfs.items():
         filename = f"{name}.{out_fmt}"
-        if in_fmt == "star":
+        if out_fmt == "star":
             df_to_star(df, cols, out_dir, filename)
-        elif in_fmt in ("box", "tsv"):
+        elif out_fmt in ("box", "tsv"):
             df_to_tsv(df, out_dir, filename)
 
 
@@ -677,8 +704,8 @@ if __name__ == "__main__":
         help="Manually specify input column names (STAR) or zero-based indices "
         "(BOX/TSV). This can be useful if input file does not follow default column "
         "indices of the specified input (-f) format. Expects six positional arguments, "
-        "corresponding to: [x, y, w, g, conf, mrc_name]. Set any unchanged or "
-        "inapplicable columns to 'auto' to keep default value.",
+        "corresponding to: [x, y, w, g, conf, mrc_name]. Set a column to 'none' to "
+        "exclude it from conversion and 'auto' to keep its default value.",
     )
     parser.add_argument(
         "-s",
@@ -689,7 +716,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--single_out",
         action="store_true",
-        help="Output should be a single file, with a column for micrograph name",
+        help="If possible, make output a single file, with column for micrograph name",
+    )
+    parser.add_argument(
+        "--multi_out",
+        action="store_true",
+        help="If possible, split output into multiple files by micrograph name",
     )
     parser.add_argument(
         "--overwrite",
@@ -702,10 +734,12 @@ if __name__ == "__main__":
     # validation
     if a.f in ("star", "tsv") and a.b is None:
         _log(f"box size required for '{a.f}' input", 2)
+    if a.single_out and a.multi_out:
+        _log(f"cannot fulfill both single_out and multi_out flags", 2)
 
     cols = {}
     for i, col in enumerate(_COLS):
-        cols[col] = a.c[i] if a.c[i] != "auto" else None
+        cols[col] = a.c[i] if a.c[i] != "none" else None
 
     process_conversion(
         np.atleast_1d(a.input),
@@ -716,5 +750,6 @@ if __name__ == "__main__":
         cols,
         a.s,
         a.single_out,
+        a.multi_out,
         a.overwrite,
     )
