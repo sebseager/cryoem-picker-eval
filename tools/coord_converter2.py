@@ -260,7 +260,7 @@ def process_conversion(
             _log("cannot fulfill multi_out without micrograph name information", 1)
 
     for name, df in out_dfs.items():
-        filename = f"{name}.{out_fmt}"
+        filename = f"{name}{suffix}.{out_fmt}"
         if out_fmt == "star":
             df_to_star(df, cols, out_dir, filename)
         elif out_fmt in ("box", "tsv"):
