@@ -29,11 +29,22 @@ sh patches/autocryopicker/patch_autocryopicker.sh pickers/autocryopicker/
 
 Before running AutoCryoPicker, `.mrc` micrograph files must be converted to a `.png` format. [TODO: add link to script to do this (message me for this for now)]
 
-Assuming the MATLAB executable is available at the `matlab` command, use the following to run AutoCryoPicker on a single micrograph:
+Assuming the MATLAB executable is available at the `matlab` command. Yale HPC users can use the following command to load MATLAB as a module.
 
 ```shell script
-png_file=path/to/mrc.png
-out_name=$(basename $png_file); matlab -nosplash -nodisplay -r "mrc='$png_file';AutoPicker_Final_Demo" -logfile "${out_name%.png}.box"
+module load MATLAB/2020b
 ```
 
-[TODO: in shell above get rid of anything before AUTOCRYOPICKER_DETECTIONS_START]
+Use the following to run AutoCryoPicker on a single micrograph:
+
+```shell script
+png_file=/full/path/to/mrc.png  # modify this
+out_name=$(basename $png_file) && label_file="${out_name%.png}.box"
+matlab -nosplash -nodisplay -r "mrc='$png_file';AutoPicker_Final_Demo" -logfile "$label_file"
+```
+
+Finally, assuming the output of the above command has not been moved, run the following to remove any headers prepended by MATLAB:
+
+```shell script
+awk '/AUTOCRYOPICKER_DETECTIONS_START/ ? c++ : c' "$label_file" > "$label_file"
+```
