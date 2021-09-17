@@ -159,13 +159,13 @@ def df_to_star(df, col_names, out_dir, name, do_overwrite=False):
     df.to_csv(out_path, header=True, sep="\t", index=False, mode="a")
 
 
-def df_to_tsv(df, out_dir, name, do_overwrite=False):
+def df_to_tsv(df, out_dir, name, include_header=False, do_overwrite=False):
     out_path = Path(out_dir) / name
 
     if out_path.exists() and not do_overwrite:
         _log("re-run with the overwrite flag to replace existing files", 2)
 
-    df.to_csv(out_path, header=True, sep="\t", index=False)
+    df.to_csv(out_path, header=include_header, sep="\t", index=False)
 
 
 # handler method
@@ -179,6 +179,7 @@ def process_conversion(
     boxsize,
     cols,
     suffix,
+    include_header,
     single_out,
     multi_out,
     do_overwrite,
@@ -262,9 +263,15 @@ def process_conversion(
     for name, df in out_dfs.items():
         filename = f"{name}{suffix}.{out_fmt}"
         if out_fmt == "star":
-            df_to_star(df, cols, out_dir, filename)
+            df_to_star(df, cols, out_dir, filename, do_overwrite=do_overwrite)
         elif out_fmt in ("box", "tsv"):
-            df_to_tsv(df, out_dir, filename)
+            df_to_tsv(
+                df,
+                out_dir,
+                filename,
+                include_header=include_header,
+                do_overwrite=do_overwrite,
+            )
 
 
 if __name__ == "__main__":
@@ -316,6 +323,12 @@ if __name__ == "__main__":
         help="Suffix to append to generated output (default: _converted)",
     )
     parser.add_argument(
+        "--header",
+        action="store_true",
+        help="If output format is BOX or TSV, include column headers (has no effect "
+        "with STAR output)",
+    )
+    parser.add_argument(
         "--single_out",
         action="store_true",
         help="If possible, make output a single file, with column for micrograph name",
@@ -351,6 +364,7 @@ if __name__ == "__main__":
         a.b,
         cols,
         a.s,
+        a.header,
         a.single_out,
         a.multi_out,
         a.overwrite,
