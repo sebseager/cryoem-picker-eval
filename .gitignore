@@ -6,3 +6,4 @@ docs/.jekyll-metadata
 docs/Gemfile.lock
 .DS_Store
 .idea
+__pycache__/

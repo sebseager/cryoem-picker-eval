@@ -1,0 +1,127 @@
+import os
+import sys
+import argparse
+from pathlib import Path
+from glob import glob
+import numpy as np
+from tqdm import tqdm
+from coord_converter import process_conversion
+from sklearn.metrics import f1_score
+
+
+def segmentation_f1_score(gt_boxes, pckr_boxes, conf_thresh=0, max_x=None, max_y=None):
+    """
+    Calculate a score between ground truth and picker box lists by creating a
+    segmentation map for each and computing the F1 score between them. Optionally
+    provide micrograph width and height to fix segmentation map size.
+    """
+
+    # if maxes not set, calculate them from provided boxes
+    if max_x is None:
+        max_x = round(max([n.x + n.w for n in gt_boxes + pckr_boxes]))
+
+    if max_y is None:
+        max_y = round(max([n.y + n.h for n in gt_boxes + pckr_boxes]))
+
+    # make binary arrays masking out GT/picker boxes
+    gt_arr = np.zeros((max_y, max_x))
+    pckr_arr = np.zeros((max_y, max_x))
+    for b in gt_boxes:
+        x, y, w, h = round(b.x), round(b.y), round(b.w), round(b.h)
+        gt_arr[y : y + h, x : x + w] = 1
+    for b in pckr_boxes:
+        if b.conf < conf_thresh:
+            continue
+        x, y, w, h = round(b.x), round(b.y), round(b.w), round(b.h)
+        pckr_arr[y : y + h, x : x + w] = 1
+
+    f1 = f1_score(gt_arr.flatten(), pckr_arr.flatten())
+    return f1
+
+
+if __name__ == "__main__":
+    # argument parsing
+    parser = argparse.ArgumentParser(
+        description="Score detections between ground truth and particle picker "
+        "coordinate sets, matching files by name. All coordinate files must be "
+        "in the BOX file format. Use coord_converter.py to perform any necessary "
+        "conversion."
+    )
+
+    parser.add_argument(
+        "-g",
+        help="Ground truth particle coordinate file(s)",
+        nargs="+",
+        required=True,
+    )
+    parser.add_argument(
+        "-p",
+        help="Particle picker coordinate file(s)",
+        nargs="+",
+        required=True,
+    )
+    parser.add_argument(
+        "-b", help="Box size used for particle evaluation.", type=int, required=True
+    )
+    parser.add_argument(
+        "--height", help="Micrograph height (pixels)", type=int, default=None
+    )
+    parser.add_argument(
+        "--width", help="Micrograph width (pixels)", type=int, default=None
+    )
+    parser.add_argument(
+        "--verbose", help="Print individual boxfile pair scores", action="store_true"
+    )
+
+    a = parser.parse_args()
+    a.g = np.atleast_1d(a.g)
+    a.p = np.atleast_1d(a.p)
+
+    gt_names = [Path(f).stem.lower() for f in a.g]
+    pckr_names = [Path(f).stem.lower() for f in a.p]
+
+    # do startswith in case pickers append suffixes
+    gt_matches = [g for g in gt_names if sum(p.startswith(g) for p in pckr_names) > 0]
+
+    # cfg = im.read_config(a.config_file)
+
+    if a.verbose:
+        print(f"Found {len(gt_matches)} boxfile matches\n")
+
+    all_scores = []
+    for match in tqdm(gt_matches):
+        gt_path = next(f for f in a.g if Path(f).stem.lower() == match)
+        pckr_path = next(f for f in a.p if Path(f).stem.lower().startswith(match))
+
+        # process gt and pckr box files
+        gt_dfs = process_conversion(
+            [gt_path], "box", "box", a.b, out_dir=None, quiet=True
+        )
+        p_dfs = process_conversion(
+            [pckr_path], "box", "box", a.b, out_dir=None, quiet=True
+        )
+
+        gt_df = list(gt_dfs.values())[0]
+        pckr_df = list(p_dfs.values())[0]
+
+        for df in (gt_df, pckr_df):
+            if "conf" not in df.columns:
+                df["conf"] = 1
+
+        gt_boxes = list(gt_df.itertuples(name="Box", index=False))
+        pckr_boxes = list(pckr_df.itertuples(name="Box", index=False))
+
+        score = segmentation_f1_score(
+            gt_boxes, pckr_boxes, conf_thresh=0, max_x=a.width, max_y=a.height
+        )
+        all_scores.append(score)
+
+        if a.verbose:
+            tqdm.write(f"Indiv. score ({match}): {score}")
+
+    avg_score = np.mean(all_scores)
+    std_score = np.std(all_scores)
+    if a.verbose:
+        print(f"\nAVG. SCORE: {avg_score}, STDEV: {std_score}")
+    else:
+        print(avg_score)

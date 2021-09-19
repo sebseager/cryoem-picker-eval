@@ -1,11 +1,9 @@
 import sys
-import os
-import logging
+import re
+from pathlib import Path
 import pandas as pd
 import numpy as np
-import re
 import argparse
-from pathlib import Path
 from collections import namedtuple
 
 
@@ -18,7 +16,7 @@ STAR_COL_X = "_rlnCoordinateX"
 STAR_COL_Y = "_rlnCoordinateY"
 STAR_COL_C = "_rlnAutopickFigureOfMerit"
 STAR_COL_N = "_rlnMicrographName"
-_COLS = ["x", "y", "w", "h", "conf", "name"]
+DEFAULT_COLS = ["x", "y", "w", "h", "conf", "name"]
 
 
 # utils
@@ -133,8 +131,11 @@ def tsv_to_df(path):
 # writing
 
 
-def df_to_star(df, col_names, out_dir, name, do_overwrite=False):
-    out_path = Path(out_dir) / name
+def df_to_star(df, col_names, out_path, do_overwrite=False):
+    """
+    Write df generated from one of the *_to_df methods in this module out to file
+    with appropriate STAR header prepended.
+    """
 
     if out_path.exists() and not do_overwrite:
         _log("re-run with the overwrite flag to replace existing files", 2)
@@ -148,9 +149,6 @@ def df_to_star(df, col_names, out_dir, name, do_overwrite=False):
             idx = df_cols.index(col)
             star_loop += f"{col_name} #{idx + 1}\n"
         except ValueError:
-            # _log(f"could not find data for STAR column ({e})", 1)
-            # import pdb
-            # pdb.set_trace()
             pass
 
     with open(out_path, "w") as f:
@@ -159,8 +157,11 @@ def df_to_star(df, col_names, out_dir, name, do_overwrite=False):
     df.to_csv(out_path, header=True, sep="\t", index=False, mode="a")
 
 
-def df_to_tsv(df, out_dir, name, include_header=False, do_overwrite=False):
-    out_path = Path(out_dir) / name
+def df_to_tsv(df, out_path, include_header=False, do_overwrite=False):
+    """
+    Write df generated from one of the *_to_df methods in this module out to file,
+    optionally writing out [x, y, w, h, conf] labels as a header.
+    """
 
     if out_path.exists() and not do_overwrite:
         _log("re-run with the overwrite flag to replace existing files", 2)
@@ -173,17 +174,23 @@ def df_to_tsv(df, out_dir, name, include_header=False, do_overwrite=False):
 
 def process_conversion(
     paths,
-    out_dir,
     in_fmt,
     out_fmt,
     boxsize,
-    cols,
-    suffix,
-    include_header,
-    single_out,
-    multi_out,
-    do_overwrite,
+    out_dir=None,
+    in_cols=("auto", "auto", "auto", "auto", "auto", "auto"),
+    suffix="",
+    include_header=False,
+    single_out=False,
+    multi_out=False,
+    do_overwrite=False,
+    quiet=False,
 ):
+
+    # set default columns as needed
+    cols = {}
+    for i, col in enumerate(DEFAULT_COLS):
+        cols[col] = in_cols[i] if in_cols[i] != "none" else None
 
     # read input files into dataframes
     dfs = {}
@@ -209,7 +216,7 @@ def process_conversion(
     for k, v in default_cols.items():
         cols[k] = v if cols[k] == AUTO else cols[k]
 
-    _log(f"using the following input column mapping:\n  {cols}", 0, verbose=True)
+    _log(f"using the following input column mapping:\n  {cols}", 0, verbose=not quiet)
 
     out_dfs = {}
     for name, df in dfs.items():
@@ -251,7 +258,7 @@ def process_conversion(
         out_dfs[name] = df[[x for x in out_cols if x in df.columns]]
 
     if single_out:
-        out_dfs = {"all_coords": pd.concat(out_dfs, ignore_index=True)}
+        out_dfs = {"all": pd.concat(out_dfs, ignore_index=True)}
 
     if multi_out:
         if all("name" in df.columns for df in out_dfs.values()):
@@ -260,15 +267,18 @@ def process_conversion(
         else:
             _log("cannot fulfill multi_out without micrograph name information", 1)
 
+    if out_dir is None:
+        return out_dfs
+
     for name, df in out_dfs.items():
         filename = f"{name}{suffix}.{out_fmt}"
+        out_path = Path(out_dir) / filename
         if out_fmt == "star":
-            df_to_star(df, cols, out_dir, filename, do_overwrite=do_overwrite)
+            df_to_star(df, cols, out_path, do_overwrite=do_overwrite)
         elif out_fmt in ("box", "tsv"):
             df_to_tsv(
                 df,
-                out_dir,
-                filename,
+                out_path,
                 include_header=include_header,
                 do_overwrite=do_overwrite,
             )
@@ -318,7 +328,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-s",
-        default="_converted",
+        default="",
         type=str,
         help="Suffix to append to generated output (default: _converted)",
     )
@@ -343,6 +353,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Allow files in output directory to be overwritten",
     )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Silence info-level output",
+    )
 
     a = parser.parse_args()
 
@@ -352,20 +367,16 @@ if __name__ == "__main__":
     if a.single_out and a.multi_out:
         _log(f"cannot fulfill both single_out and multi_out flags", 2)
 
-    cols = {}
-    for i, col in enumerate(_COLS):
-        cols[col] = a.c[i] if a.c[i] != "none" else None
-
     process_conversion(
-        np.atleast_1d(a.input),
-        a.out_dir,
-        a.f,
-        a.t,
-        a.b,
-        cols,
-        a.s,
-        a.header,
-        a.single_out,
-        a.multi_out,
-        a.overwrite,
+        paths=np.atleast_1d(a.input),
+        in_fmt=a.f,
+        out_fmt=a.t,
+        boxsize=a.b,
+        out_dir=a.out_dir,
+        in_cols=a.c,
+        suffix=a.s,
+        include_header=a.header,
+        single_out=a.single_out,
+        multi_out=a.multi_out,
+        do_overwrite=a.overwrite,
     )
