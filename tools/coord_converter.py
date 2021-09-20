@@ -169,7 +169,7 @@ def df_to_star(df, out_path, do_overwrite=False):
     df.to_csv(out_path, header=False, sep="\t", index=False, mode="a")
 
 
-def df_to_tsv(df, out_path, include_header=False, do_overwrite=False):
+def df_to_tsv(df, col_order, out_path, include_header=False, do_overwrite=False):
     """
     Write df generated from one of the *_to_df methods in this module out to file,
     optionally writing out [x, y, w, h, conf] labels as a header.
@@ -178,7 +178,8 @@ def df_to_tsv(df, out_path, include_header=False, do_overwrite=False):
     if out_path.exists() and not do_overwrite:
         _log("re-run with the overwrite flag to replace existing files", 2)
 
-    df.to_csv(out_path, header=include_header, sep="\t", index=False)
+    out_cols = [c for c in col_order if c in df.columns]
+    df[out_cols].to_csv(out_path, header=include_header, sep="\t", index=False)
 
 
 # handler method
@@ -191,6 +192,7 @@ def process_conversion(
     boxsize,
     out_dir=None,
     in_cols=("auto", "auto", "auto", "auto", "auto", "auto"),
+    out_col_order=("x", "y", "w", "h", "conf", "name"),
     suffix="",
     include_header=False,
     single_out=False,
@@ -289,8 +291,14 @@ def process_conversion(
         if out_fmt == "star":
             df_to_star(df, out_path, do_overwrite=do_overwrite)
         elif out_fmt in ("box", "tsv"):
+            _log(
+                f"using the following output column order:\n  {out_col_order}",
+                0,
+                verbose=not quiet,
+            )
             df_to_tsv(
                 df,
+                out_col_order,
                 out_path,
                 include_header=include_header,
                 do_overwrite=do_overwrite,
@@ -338,6 +346,16 @@ if __name__ == "__main__":
         "indices of the specified input (-f) format. Expects six positional arguments, "
         "corresponding to: [x, y, w, g, conf, mrc_name]. Set a column to 'none' to "
         "exclude it from conversion and 'auto' to keep its default value.",
+    )
+    parser.add_argument(
+        "-d",
+        nargs=6,
+        default=("x", "y", "w", "h", "conf", "name"),
+        help="Manually specify the order of columns in output files (only applies to "
+        "BOX/TSV output formats). Expects six positional arguments, which should be "
+        "some ordering of the strings ['x', 'y', 'w', 'h', 'conf', 'name']. Use any "
+        "other string (like 'none') at any of the six positions to exclude the "
+        "missing column from the output.",
     )
     parser.add_argument(
         "-s",
@@ -394,6 +412,7 @@ if __name__ == "__main__":
         boxsize=a.b,
         out_dir=a.out_dir,
         in_cols=a.c,
+        out_col_order=a.d,
         suffix=a.s,
         include_header=a.header,
         single_out=a.single_out,
