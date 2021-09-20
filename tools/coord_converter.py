@@ -16,7 +16,19 @@ STAR_COL_X = "_rlnCoordinateX"
 STAR_COL_Y = "_rlnCoordinateY"
 STAR_COL_C = "_rlnAutopickFigureOfMerit"
 STAR_COL_N = "_rlnMicrographName"
-DEFAULT_COLS = ["x", "y", "w", "h", "conf", "name"]
+DF_COL_NAMES = ["x", "y", "w", "h", "conf", "name"]
+STAR_HEADER_MAP = {
+    "x": STAR_COL_X,
+    "y": STAR_COL_Y,
+    "w": None,
+    "h": None,
+    "conf": STAR_COL_C,
+    "name": STAR_COL_N,
+}
+BOX_HEADER_MAP = {"x": 0, "y": 1, "w": 2, "h": 3, "conf": 4, "name": None}
+TSV_HEADER_MAP = {"x": 0, "y": 1, "w": None, "h": None, "conf": 2, "name": None}
+
+AUTO = "auto"
 
 
 # utils
@@ -131,7 +143,7 @@ def tsv_to_df(path):
 # writing
 
 
-def df_to_star(df, col_names, out_path, do_overwrite=False):
+def df_to_star(df, out_path, do_overwrite=False):
     """
     Write df generated from one of the *_to_df methods in this module out to file
     with appropriate STAR header prepended.
@@ -142,19 +154,19 @@ def df_to_star(df, col_names, out_path, do_overwrite=False):
 
     df_cols = list(df.columns)
     star_loop = "data_\n\nloop_\n"
-    for col, col_name in col_names.items():
-        if col_name is None:
+    for df_col, star_col in STAR_HEADER_MAP.items():
+        if star_col is None:
             continue
         try:
-            idx = df_cols.index(col)
-            star_loop += f"{col_name} #{idx + 1}\n"
+            idx = df_cols.index(df_col)
+            star_loop += f"{star_col} #{idx + 1}\n"
         except ValueError:
             pass
 
     with open(out_path, "w") as f:
         f.write(star_loop)
 
-    df.to_csv(out_path, header=True, sep="\t", index=False, mode="a")
+    df.to_csv(out_path, header=False, sep="\t", index=False, mode="a")
 
 
 def df_to_tsv(df, out_path, include_header=False, do_overwrite=False):
@@ -183,33 +195,26 @@ def process_conversion(
     include_header=False,
     single_out=False,
     multi_out=False,
+    round_to=None,
     do_overwrite=False,
     quiet=False,
 ):
 
     # set default columns as needed
     cols = {}
-    for i, col in enumerate(DEFAULT_COLS):
+    for i, col in enumerate(DF_COL_NAMES):
         cols[col] = in_cols[i] if in_cols[i] != "none" else None
 
     # read input files into dataframes
     dfs = {}
-    AUTO = "auto"
     if in_fmt == "star":
-        default_cols = {
-            "x": STAR_COL_X,
-            "y": STAR_COL_Y,
-            "w": None,
-            "h": None,
-            "conf": STAR_COL_C,
-            "name": STAR_COL_N,
-        }
+        default_cols = STAR_HEADER_MAP
         dfs = {Path(p).stem: star_to_df(p) for p in paths}
     elif in_fmt == "box":
-        default_cols = {"x": 0, "y": 1, "w": 2, "h": 3, "conf": 4, "name": None}
+        default_cols = BOX_HEADER_MAP
         dfs = {Path(p).stem: tsv_to_df(p) for p in paths}
     elif in_fmt == "tsv":
-        default_cols = {"x": 0, "y": 1, "w": None, "h": None, "conf": 2, "name": None}
+        default_cols = TSV_HEADER_MAP
         dfs = {Path(p).stem: tsv_to_df(p) for p in paths}
 
     # apply any default cols needed
@@ -238,13 +243,21 @@ def process_conversion(
         # modify coordinates for output format if needed
         try:
             if in_fmt in ("star", "tsv") and out_fmt in ("box",):
-                df["w"] = [boxsize] * len(df.index)
-                df["h"] = [boxsize] * len(df.index)
+                df["w"] = boxsize
+                df["h"] = boxsize
                 df["x"] = df["x"] - df["w"].div(2)
                 df["y"] = df["y"] - df["h"].div(2)
             elif in_fmt in ("box",) and out_fmt in ("star", "tsv"):
                 df["x"] = df["x"] + df["w"].div(2)
                 df["y"] = df["y"] + df["h"].div(2)
+
+            if round_to is not None:
+                df["x"] = df["x"].round(round_to)
+                df["y"] = df["y"].round(round_to)
+                if round_to == 0:
+                    df["x"] = df["x"].astype(int)
+                    df["y"] = df["y"].astype(int)
+
         except KeyError as e:
             _log(f"did not find column {e} in input columns ({list(df.columns)})", 2)
         except TypeError as e:
@@ -274,7 +287,7 @@ def process_conversion(
         filename = f"{name}{suffix}.{out_fmt}"
         out_path = Path(out_dir) / filename
         if out_fmt == "star":
-            df_to_star(df, cols, out_path, do_overwrite=do_overwrite)
+            df_to_star(df, out_path, do_overwrite=do_overwrite)
         elif out_fmt in ("box", "tsv"):
             df_to_tsv(
                 df,
@@ -349,6 +362,13 @@ if __name__ == "__main__":
         help="If possible, split output into multiple files by micrograph name",
     )
     parser.add_argument(
+        "--round",
+        default=None,
+        type=int,
+        help="Round coordinates to the specified number of decimal places "
+        "(don't round by default)",
+    )
+    parser.add_argument(
         "--overwrite",
         action="store_true",
         help="Allow files in output directory to be overwritten",
@@ -378,5 +398,7 @@ if __name__ == "__main__":
         include_header=a.header,
         single_out=a.single_out,
         multi_out=a.multi_out,
+        round_to=a.round,
         do_overwrite=a.overwrite,
+        quiet=a.quiet,
     )
