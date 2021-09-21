@@ -75,6 +75,16 @@ def _has_numbers(s):
     return res
 
 
+def _make_parent_dir(path_str):
+    par_dir = Path(path_str).parent.resolve()
+    if not par_dir.is_dir():
+        par_dir.mkdir(parents=True, exist_ok=True)
+
+
+def _path_occupied(path_str):
+    return Path(path_str).resolve().is_file()
+
+
 # parsing
 
 
@@ -143,14 +153,17 @@ def tsv_to_df(path):
 # writing
 
 
-def df_to_star(df, out_path, do_overwrite=False):
+def df_to_star(df, out_path, do_force=False):
     """
     Write df generated from one of the *_to_df methods in this module out to file
     with appropriate STAR header prepended.
     """
 
-    if out_path.exists() and not do_overwrite:
-        _log("re-run with the overwrite flag to replace existing files", 2)
+    if do_force:
+        _make_parent_dir(out_path)
+    else:
+        if _path_occupied(out_path):
+            _log("re-run with the force flag to replace existing files", 2)
 
     df_cols = list(df.columns)
     star_loop = "data_\n\nloop_\n"
@@ -169,14 +182,17 @@ def df_to_star(df, out_path, do_overwrite=False):
     df.to_csv(out_path, header=False, sep="\t", index=False, mode="a")
 
 
-def df_to_tsv(df, col_order, out_path, include_header=False, do_overwrite=False):
+def df_to_tsv(df, col_order, out_path, include_header=False, do_force=False):
     """
     Write df generated from one of the *_to_df methods in this module out to file,
     optionally writing out [x, y, w, h, conf] labels as a header.
     """
 
-    if out_path.exists() and not do_overwrite:
-        _log("re-run with the overwrite flag to replace existing files", 2)
+    if do_force:
+        _make_parent_dir(out_path)
+    else:
+        if _path_occupied(out_path):
+            _log("re-run with the force flag to replace existing files", 2)
 
     out_cols = [c for c in col_order if c in df.columns]
     df[out_cols].to_csv(out_path, header=include_header, sep="\t", index=False)
@@ -198,7 +214,7 @@ def process_conversion(
     single_out=False,
     multi_out=False,
     round_to=None,
-    do_overwrite=False,
+    do_force=False,
     quiet=False,
 ):
 
@@ -289,7 +305,7 @@ def process_conversion(
         filename = f"{name}{suffix}.{out_fmt}"
         out_path = Path(out_dir) / filename
         if out_fmt == "star":
-            df_to_star(df, out_path, do_overwrite=do_overwrite)
+            df_to_star(df, out_path, do_force=do_force)
         elif out_fmt in ("box", "tsv"):
             _log(
                 f"using the following output column order:\n  {out_col_order}",
@@ -301,7 +317,7 @@ def process_conversion(
                 out_col_order,
                 out_path,
                 include_header=include_header,
-                do_overwrite=do_overwrite,
+                do_force=do_force,
             )
 
 
@@ -387,9 +403,10 @@ if __name__ == "__main__":
         "(don't round by default)",
     )
     parser.add_argument(
-        "--overwrite",
+        "--force",
         action="store_true",
-        help="Allow files in output directory to be overwritten",
+        help="Allow files in output directory to be overwritten and make output "
+        "directory if it does not exist",
     )
     parser.add_argument(
         "--quiet",
@@ -418,6 +435,6 @@ if __name__ == "__main__":
         single_out=a.single_out,
         multi_out=a.multi_out,
         round_to=a.round,
-        do_overwrite=a.overwrite,
+        do_force=a.force,
         quiet=a.quiet,
     )
