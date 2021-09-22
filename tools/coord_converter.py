@@ -34,15 +34,14 @@ AUTO = "auto"
 # utils
 
 
-def _log(msg, lvl=0, verbose=False):
-    """
-    Format and print message to console with one of the following logging levels:
-    0: info (print and continue execution; ignore if verbose=False)
+def _log(msg, lvl=0, quiet=False):
+    """Format and print message to console with one of the following logging levels:
+    0: info (print and continue execution; ignore if quiet=True)
     1: warning (print and continue execution)
     2: error (print and exit with code 1)
     """
 
-    if lvl == 0 and not verbose:
+    if lvl == 0 and quiet:
         return
 
     prefix = ""
@@ -67,9 +66,7 @@ def _is_int(x):
 
 
 def _has_numbers(s):
-    """
-    Returns True if string s contains any number, otherwise False.
-    """
+    """Returns True if string s contains any number, otherwise False."""
 
     res = re.search("[0-9]", str(s)) is not None
     return res
@@ -89,8 +86,8 @@ def _path_occupied(path_str):
 
 
 def star_to_df(path):
-    """
-    Convert any well formatted STAR file into a DataFrame with correct column headers.
+    """Convert any well formatted STAR file into a DataFrame with correct column
+    headers.
     """
 
     header = {}
@@ -126,8 +123,7 @@ def star_to_df(path):
 
 
 def tsv_to_df(path):
-    """
-    Generate a dataframe from the TSV-like file at the specified path, skipping
+    """Generate a dataframe from the TSV-like file at the specified path, skipping
     any non-numeric header rows.
     """
 
@@ -154,8 +150,7 @@ def tsv_to_df(path):
 
 
 def df_to_star(df, out_path, do_force=False):
-    """
-    Write df generated from one of the *_to_df methods in this module out to file
+    """Write df generated from one of the *_to_df methods in this module out to file
     with appropriate STAR header prepended.
     """
 
@@ -183,8 +178,7 @@ def df_to_star(df, out_path, do_force=False):
 
 
 def df_to_tsv(df, col_order, out_path, include_header=False, do_force=False):
-    """
-    Write df generated from one of the *_to_df methods in this module out to file,
+    """Write df generated from one of the *_to_df methods in this module out to file,
     optionally writing out [x, y, w, h, conf] labels as a header.
     """
 
@@ -205,7 +199,7 @@ def process_conversion(
     paths,
     in_fmt,
     out_fmt,
-    boxsize,
+    boxsize=None,
     out_dir=None,
     in_cols=("auto", "auto", "auto", "auto", "auto", "auto"),
     out_col_order=("x", "y", "w", "h", "conf", "name"),
@@ -239,7 +233,7 @@ def process_conversion(
     for k, v in default_cols.items():
         cols[k] = v if cols[k] == AUTO else cols[k]
 
-    _log(f"using the following input column mapping:\n  {cols}", 0, verbose=not quiet)
+    _log(f"using the following input column mapping:\n  {cols}", 0, quiet=quiet)
 
     out_dfs = {}
     for name, df in dfs.items():
@@ -261,6 +255,7 @@ def process_conversion(
         # modify coordinates for output format if needed
         try:
             if in_fmt in ("star", "tsv") and out_fmt in ("box",):
+                assert boxsize is not None, "Expected integer boxsize but got None"
                 df["w"] = boxsize
                 df["h"] = boxsize
                 df["x"] = df["x"] - df["w"].div(2)
@@ -310,7 +305,7 @@ def process_conversion(
             _log(
                 f"using the following output column order:\n  {out_col_order}",
                 0,
-                verbose=not quiet,
+                quiet=quiet,
             )
             df_to_tsv(
                 df,

@@ -9,23 +9,22 @@ from coord_converter import process_conversion
 from sklearn.metrics import f1_score
 
 
-def segmentation_f1_score(gt_boxes, pckr_boxes, conf_thresh=0, max_x=None, max_y=None):
-    """
-    Calculate a score between ground truth and picker box lists by creating a
+def segmentation_f1_score(gt_boxes, pckr_boxes, conf_thresh=0, mrc_w=None, mrc_h=None):
+    """Calculate a score between ground truth and picker box lists by creating a
     segmentation map for each and computing the F1 score between them. Optionally
     provide micrograph width and height to fix segmentation map size.
     """
 
-    # if maxes not set, calculate them from provided boxes
-    if max_x is None:
-        max_x = round(max([n.x + n.w for n in gt_boxes + pckr_boxes]))
+    # if micrograph width/height not set, calculate them from provided boxes
+    if mrc_w is None:
+        mrc_w = round(max([n.x + n.w for n in gt_boxes + pckr_boxes]))
 
-    if max_y is None:
-        max_y = round(max([n.y + n.h for n in gt_boxes + pckr_boxes]))
+    if mrc_h is None:
+        mrc_h = round(max([n.y + n.h for n in gt_boxes + pckr_boxes]))
 
     # make binary arrays masking out GT/picker boxes
-    gt_arr = np.zeros((max_y, max_x))
-    pckr_arr = np.zeros((max_y, max_x))
+    gt_arr = np.zeros((mrc_h, mrc_w))
+    pckr_arr = np.zeros((mrc_h, mrc_w))
     for b in gt_boxes:
         x, y, w, h = round(b.x), round(b.y), round(b.w), round(b.h)
         gt_arr[y : y + h, x : x + w] = 1
@@ -61,9 +60,6 @@ if __name__ == "__main__":
         required=True,
     )
     parser.add_argument(
-        "-b", help="Box size used for particle evaluation.", type=int, required=True
-    )
-    parser.add_argument(
         "--height", help="Micrograph height (pixels)", type=int, default=None
     )
     parser.add_argument(
@@ -83,10 +79,10 @@ if __name__ == "__main__":
     # do startswith in case pickers append suffixes
     gt_matches = [g for g in gt_names if sum(p.startswith(g) for p in pckr_names) > 0]
 
-    # cfg = im.read_config(a.config_file)
-
     if a.verbose:
         print(f"Found {len(gt_matches)} boxfile matches\n")
+
+    assert len(gt_matches) > 0, "No paired ground truth and picker particle sets found"
 
     all_scores = []
     for match in tqdm(gt_matches):
@@ -94,12 +90,8 @@ if __name__ == "__main__":
         pckr_path = next(f for f in a.p if Path(f).stem.lower().startswith(match))
 
         # process gt and pckr box files
-        gt_dfs = process_conversion(
-            [gt_path], "box", "box", a.b, out_dir=None, quiet=True
-        )
-        p_dfs = process_conversion(
-            [pckr_path], "box", "box", a.b, out_dir=None, quiet=True
-        )
+        gt_dfs = process_conversion([gt_path], "box", "box", out_dir=None, quiet=True)
+        p_dfs = process_conversion([pckr_path], "box", "box", out_dir=None, quiet=True)
 
         gt_df = list(gt_dfs.values())[0]
         pckr_df = list(p_dfs.values())[0]
@@ -112,7 +104,7 @@ if __name__ == "__main__":
         pckr_boxes = list(pckr_df.itertuples(name="Box", index=False))
 
         score = segmentation_f1_score(
-            gt_boxes, pckr_boxes, conf_thresh=0, max_x=a.width, max_y=a.height
+            gt_boxes, pckr_boxes, conf_thresh=0, mrc_w=a.width, mrc_h=a.height
         )
         all_scores.append(score)
 
