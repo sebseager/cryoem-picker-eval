@@ -1,13 +1,17 @@
 import sys
 import os
 import random
+import warnings
+import mrcfile
 import argparse
 import numpy as np
 from pathlib import Path
 from datetime import datetime
 from cycler import cycler
+from coord_converter import process_conversion
 import matplotlib  # we import pyplot later
 
+MRC_PLOT_MARGIN = 64
 GT_COLOR = "blue"
 PICKER_COLORS = [
     "#ff7f00",
@@ -51,21 +55,19 @@ def _log(msg, lvl=0, quiet=False):
 
 
 def _hist_equalize(arr, normalized_max=255):
-    """Perform histogram equalization on a 2D numpy array (i.e. micrograph image 
+    """Perform histogram equalization on a 2D numpy array (i.e. micrograph image
     representation).
     """
 
-    print(sys.modules)
-    if "plt" not in sys.modules:
-        from matplotlib import pyplot as plt
+    from matplotlib import pyplot as hplt
 
-    hist_fig = plt.figure()
-    hist_arr, bins, _ = plt.hist(arr.ravel(), bins="auto", density=True)
+    hist_fig = hplt.figure()
+    hist_arr, bins, _ = hplt.hist(arr.ravel(), bins="auto", density=True)
     cdf = hist_arr.cumsum()  # cumulative distribution function
     cdf = normalized_max * cdf / cdf[-1]  # normalize
 
     # use linear interpolation of cdf to find new pixel values
-    plt.close(hist_fig)
+    hplt.close(hist_fig)
     img_equalized = np.interp(arr.ravel(), bins[:-1], cdf)
     res = np.array(img_equalized.reshape(arr.shape))
 
@@ -79,10 +81,28 @@ def _invert(arr):
     return a
 
 
+def _read_mrc(path, mmap=False):
+    """Use the mrcfile module to read data from micrograph at given path."""
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if mmap:
+            with mrcfile.mmap(path, mode="r", permissive=True) as f:
+                mrc = f.data
+        else:
+            with mrcfile.open(path, mode="r", permissive=True) as f:
+                mrc = f.data
+
+    return mrc
+
+
+# plotting
+
+
 def single_mrc_overlay(
     mrcimg_norm,
-    box_arrs,
-    picker_names,
+    box_lists,
+    legend_labels,
     mrc_name,
     out_dir=None,
     samp_size=None,
@@ -90,6 +110,7 @@ def single_mrc_overlay(
     stack_idx=None,
     do_hist_eq=True,
     do_flip_contrast=False,
+    do_force=False,
     quiet=False,
 ):
 
@@ -126,8 +147,8 @@ def single_mrc_overlay(
 
         mrcimg_norm = np.moveaxis(mrcimg_norm, stack_dim, 0)[stack_idx, :, :]
         _log(
-            f"Slicing dimension {stack_dim} at index {stack_idx}. "
-            f"New shape is {mrcimg_norm.shape}",
+            f"slicing dimension {stack_dim} at index {stack_idx}; "
+            f"new shape is {mrcimg_norm.shape}",
             quiet=quiet,
         )
 
@@ -142,7 +163,7 @@ def single_mrc_overlay(
     colors = [GT_COLOR] + PICKER_COLORS
 
     # add boxes to micrograph
-    for i, arr in enumerate(box_arrs):
+    for i, arr in enumerate(box_lists):
         downsamp_boxarr = random.sample(arr, len(arr))[
             :samp_size
         ]  # slicing with None gives whole list
@@ -167,15 +188,15 @@ def single_mrc_overlay(
     extra_artists = []
 
     # generate legend (.box1 are the blue boxes) if we're doing multiple plots
-    if picker_names:
+    if legend_labels:
         legend_list = [
-            (name, box_arrs[idx][0].w) for idx, name in enumerate(picker_names)
+            (name, box_lists[idx][0].w) for idx, name in enumerate(legend_labels)
         ]
         legend_patches = []
         for idx, item in enumerate(legend_list):
             lbl = "%s (%s calls, box size: %s)" % (
                 str(item[0]),
-                str(len(box_arrs[idx])),
+                str(len(box_lists[idx])),
                 str(item[1]),
             )
             legend_patches.append(
@@ -198,8 +219,10 @@ def single_mrc_overlay(
             rect=(0, 0.18, 1, 0.98)
         )  # rect=(left, bot, right, top)
         save_destination = Path(out_dir) / f"overlay_{mrc_name.lower()}.png"
+        if save_destination.is_file() and not do_force:
+            _log("re-run with the force flag to replace existing files", 2)
         overlay_fig.savefig(save_destination, bbox_extra_artists=extra_artists)
-        _log(f"Figure saved to: {save_destination}", quiet=quiet)
+        _log(f"figure saved to: {save_destination}", quiet=quiet)
     else:
         plt.figure(overlay_fig.number)
         plt.show()
@@ -239,6 +262,12 @@ if __name__ == "__main__":
         "--flip_contrast", action="store_true", help="Invert micrograph contrast"
     )
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow files in output directory to be overwritten and make output "
+        "directory if it does not exist",
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         help="Silence info-level output",
@@ -248,62 +277,59 @@ if __name__ == "__main__":
 
     # input verification
     if not a.m and not a.b:
-        _log("Please specify micrographs or boxfiles or both", 2)
-    if a.boxes and len(a.boxes) > len(PICKER_COLORS):
-        _log("More box files were provided than colors in the available cycle.", 2)
+        _log("please specify micrographs or boxfiles or both", 2)
+    if a.b and len(a.b) > len(PICKER_COLORS):
+        _log("more box files were provided than colors in the available cycle", 2)
 
     if a.b:
         a.b = [Path(p).resolve() for p in a.b]
-    if a.out_dir:
+    if a.o:
         a.o = Path(a.o).resolve()
-        if a.literal_out:
-            a.out_dir = os.path.expanduser(a.out_dir)
-        else:
-            a.out_dir = os.path.expanduser(a.out_dir)
-            ts = str(datetime.strftime(datetime.now(), "%m-%d-%Y_%H%M%S"))
-            a.out_dir = os.path.join(
-                os.path.expanduser(a.out_dir), "boxfile_overlay_out_" + ts
-            )
-        os.makedirs(a.out_dir, exist_ok=True)
-        _log(f"Using output directory: {a.out_dir}", quiet=a.quiet)
+        if not a.o.is_dir() and not a.force:
+            _log("re-run with the force flag to create output directory", 2)
+        a.o.mkdir(parents=True, exist_ok=True)
+        _log(f"using output directory: {a.o}", quiet=a.quiet)
 
     # convert all input boxfiles to lists of Box namedtuples
-    box_lists = []
-    if a.boxes:
-        parsing_cfg = {"eval_boxsize": a.boxsize}
-        box_lists = [ct.handle_coord_parsing(parsing_cfg, b, None) for b in a.boxes]
+    if a.b:
+        box_dfs = process_conversion(a.b, "box", "box", out_dir=None, quiet=True)
+        for df in box_dfs.values():
+            if "conf" not in df.columns:
+                df["conf"] = 1
+        box_lists = [
+            list(df.itertuples(name="Box", index=False)) for df in box_dfs.values()
+        ]
 
     # load mrc
-    if a.mrc:
+    if a.m:
         try:
-            a.mrc = ut.expand_path(a.mrc, do_glob=True)[0]
+            a.m = Path(a.m).resolve()
         except KeyError:
-            _log("Invalid path.", 2)
-        mrc_img = im.read_mrc(a.mrc)
-        mrc_name = ut.basename(a.mrc, mode="name")
+            _log("invalid path", 2)
+        mrc_img = _read_mrc(a.m)
+        mrc_name = Path(a.m).stem
     else:
-        margin = 64  # arbitrary
-        box_lists_flat = list(ut.flatten(box_lists))
-        max_x = max([b.x + b.w for b in box_lists_flat]) + margin
-        max_y = max([b.y + b.h for b in box_lists_flat]) + margin
+        box_lists_flat = [b for bs in box_lists for b in bs]
+        max_x = max([b.x + b.w for b in box_lists_flat]) + MRC_PLOT_MARGIN
+        max_y = max([b.y + b.h for b in box_lists_flat]) + MRC_PLOT_MARGIN
         mrc_img = np.ones((max_y, max_x))
         mrc_name = "[boxes only]"
-        _log(f"Assuming mrc shape of {max_y} rows, {max_x} cols")
+        _log(f"assuming mrc shape of {max_y} rows, {max_x} cols")
 
     # report run options used
-    _log(f"Using box size preset: {a.boxsize}")
-    _log(f"Building overlay_fig: {mrc_name}")
+    _log(f"building overlay_fig: {mrc_name}")
 
     single_mrc_overlay(
         mrc_img,
         box_lists,
-        a.boxes,
+        a.b,
         mrc_name,
-        out_dir=a.out_dir,
+        out_dir=a.o,
         samp_size=a.samp_size,
         stack_dim=a.stack_dim,
         stack_idx=a.stack_idx,
         do_hist_eq=a.no_hist_eq,
         do_flip_contrast=a.flip_contrast,
-        quiet=a.quiet
+        do_force=a.force,
+        quiet=a.quiet,
     )
