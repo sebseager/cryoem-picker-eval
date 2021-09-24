@@ -67,7 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("mrc", help="Micrograph file(s) to convert to PNG", nargs="+")
     parser.add_argument(
         "-o",
-        help="Output directory for new PNG files (will be created if does not exist)",
+        help="Output directory for new PNG files",
         required=True,
     )
     parser.add_argument(
