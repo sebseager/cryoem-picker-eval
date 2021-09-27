@@ -17,7 +17,7 @@ class Apple:
     def __init__(self, output_dir=None):
 
         self.particle_size = config.apple.particle_size
-        self.query_image_size = config.apple.query_image_size
+        self.query_image_size = None  # config.apple.query_image_size  # SJHS
         self.max_particle_size = config.apple.max_particle_size or self.particle_size * 2
         self.min_particle_size = config.apple.min_particle_size or self.particle_size // 4
         self.minimum_overlap_amount = config.apple.minimum_overlap_amount or self.particle_size // 10
