@@ -239,6 +239,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--samp_size",
         required=False,
+        type=int,
         help="Number of boxes per boxfile to plot (default: 50)",
     )
     parser.add_argument(
