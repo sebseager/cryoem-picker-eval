@@ -211,7 +211,7 @@ def single_mrc_overlay(
             handles=legend_patches,
             bbox_to_anchor=(0.5, 0),
             loc="lower center",
-            fontsize=5,
+            fontsize=2,
             ncol=1,
             frameon=False,
         )
