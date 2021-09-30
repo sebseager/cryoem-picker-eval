@@ -221,13 +221,15 @@ def process_conversion(
     dfs = {}
     if in_fmt == "star":
         default_cols = STAR_HEADER_MAP
-        dfs = {Path(p).stem: star_to_df(p) for p in paths}
+        dfs = {p: star_to_df(p) for p in paths}
     elif in_fmt == "box":
         default_cols = BOX_HEADER_MAP
-        dfs = {Path(p).stem: tsv_to_df(p) for p in paths}
+        dfs = {p: tsv_to_df(p) for p in paths}
     elif in_fmt == "tsv":
         default_cols = TSV_HEADER_MAP
-        dfs = {Path(p).stem: tsv_to_df(p) for p in paths}
+        dfs = {p: tsv_to_df(p) for p in paths}
+    else:
+        _log("unknown format", 2)
 
     # apply any default cols needed
     for k, v in default_cols.items():
@@ -417,8 +419,13 @@ if __name__ == "__main__":
     if a.single_out and a.multi_out:
         _log(f"cannot fulfill both single_out and multi_out flags", 2)
 
+    a.input = [Path(p).resolve() for p in np.atleast_1d(a.input)]
+
+    if not all(p.is_file() for p in a.input):
+        _log(f"bad input paths", 2)
+
     process_conversion(
-        paths=np.atleast_1d(a.input),
+        paths=a.input,
         in_fmt=a.f,
         out_fmt=a.t,
         boxsize=a.b,
