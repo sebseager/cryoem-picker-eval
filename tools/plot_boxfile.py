@@ -189,9 +189,14 @@ def single_mrc_overlay(
 
     # generate legend (.box1 are the blue boxes) if we're doing multiple plots
     if legend_labels:
-        legend_list = [
-            (name, box_lists[idx][0].w) for idx, name in enumerate(legend_labels)
-        ]
+        try:
+            legend_list = [
+                (name, box_lists[idx][0].w) for idx, name in enumerate(legend_labels)
+            ]
+        except IndexError:
+            import pdb
+
+            pdb.set_trace()
         legend_patches = []
         for idx, item in enumerate(legend_list):
             lbl = "%s (%s calls, box size: %s)" % (
