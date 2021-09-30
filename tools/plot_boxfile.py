@@ -192,9 +192,8 @@ def single_mrc_overlay(
                 (name, box_lists[idx][0].w) for idx, name in enumerate(legend_labels)
             ]
         except IndexError:
-            import pdb
+            legend_list = []  # in case not all boxfiles were read in properly
 
-            pdb.set_trace()
         legend_patches = []
         for idx, item in enumerate(legend_list):
             lbl = f"{item[0]} ({len(box_lists[idx])} boxes, box size: {item[1]})"
@@ -298,10 +297,6 @@ if __name__ == "__main__":
         box_lists = [
             list(df.itertuples(name="Box", index=False)) for df in box_dfs.values()
         ]
-
-        import pdb
-
-        pdb.set_trace()
 
     # load mrc
     if a.m:
