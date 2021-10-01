@@ -179,26 +179,24 @@ def single_mrc_overlay(
             overlay_ax.add_patch(rect)
 
     # generate micrograph title
-    fig_title = "%s\n(Sample Size: %s)" % (
-        mrc_name,
-        "All" if samp_size is None else str(samp_size),
-    )
+    samp_size_str = "All" if samp_size is None else samp_size
+    fig_title = f"{mrc_name}\n(Sample Size: {samp_size_str})"
     overlay_ax.set_title(fig_title, fontsize=4, pad=3)
 
     extra_artists = []
 
     # generate legend (.box1 are the blue boxes) if we're doing multiple plots
     if legend_labels:
-        legend_list = [
-            (name, box_lists[idx][0].w) for idx, name in enumerate(legend_labels)
-        ]
+        try:
+            legend_list = [
+                (name, box_lists[idx][0].w) for idx, name in enumerate(legend_labels)
+            ]
+        except IndexError:
+            legend_list = []  # in case not all boxfiles were read in properly
+
         legend_patches = []
         for idx, item in enumerate(legend_list):
-            lbl = "%s (%s calls, box size: %s)" % (
-                str(item[0]),
-                str(len(box_lists[idx])),
-                str(item[1]),
-            )
+            lbl = f"{item[0]} ({len(box_lists[idx])} boxes, box size: {item[1]})"
             legend_patches.append(
                 patches.Patch(color=([GT_COLOR] + PICKER_COLORS)[idx], label=lbl)
             )
@@ -206,7 +204,7 @@ def single_mrc_overlay(
             handles=legend_patches,
             bbox_to_anchor=(0.5, 0),
             loc="lower center",
-            fontsize=5,
+            fontsize=2.5,
             ncol=1,
             frameon=False,
         )
@@ -241,6 +239,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--samp_size",
         required=False,
+        type=int,
         help="Number of boxes per boxfile to plot (default: 50)",
     )
     parser.add_argument(
