@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 from datetime import datetime
+import os
 import os.path
 import time
 
@@ -57,7 +58,6 @@ def train():
     train_number = float(opt.train_number) 
     mrc_number = int(opt.mrc_number)
     coordinate_symbol = opt.coordinate_symbol
-    debug_dir = '../train_output'   # output dir
     particle_size = int(opt.particle_size)
     validation_ratio = float(opt.validation_ratio)   
 
@@ -69,6 +69,7 @@ def train():
 
     if not os.access(model_save_dir, os.F_OK):
         os.mkdir(model_save_dir)
+    debug_dir = os.path.join(model_save_dir,"train_output",'')#'../train_output'   # output dir
     if not os.access(debug_dir, os.F_OK):
         os.mkdir(debug_dir)
 

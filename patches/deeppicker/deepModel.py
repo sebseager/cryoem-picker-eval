@@ -91,7 +91,7 @@ class DeepModel(object):
         output : loss
         """
         cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                    logits, self.train_label_node, name = 'cross_entropy_all')
+            logits=logits, labels=self.train_label_node, name='cross_entropy_all')
         cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
         tf.add_to_collection('losses', cross_entropy_mean)
         all_loss = tf.add_n(tf.get_collection('losses'), name='all_loss')
