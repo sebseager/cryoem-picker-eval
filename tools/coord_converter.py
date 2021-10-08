@@ -261,9 +261,13 @@ def process_conversion(
                 assert boxsize is not None, "Expected integer boxsize but got None"
                 df["w"] = boxsize
                 df["h"] = boxsize
+                for c in ("x", "y", "w", "h"):
+                    df[c] = df[c].astype(float)
                 df["x"] = df["x"] - df["w"].div(2)
                 df["y"] = df["y"] - df["h"].div(2)
             elif in_fmt in ("box",) and out_fmt in ("star", "tsv"):
+                for c in ("x", "y", "w", "h"):
+                    df[c] = df[c].astype(float)
                 df["x"] = df["x"] + df["w"].div(2)
                 df["y"] = df["y"] + df["h"].div(2)
 
