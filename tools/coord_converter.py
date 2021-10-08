@@ -116,6 +116,9 @@ def star_to_df(path):
         skiprows=header_line_count,
     )
 
+    print(df)
+    print(header_line_count)
+
     # rename columns according to STAR header
     df = df.rename(columns={df.columns[k]: v for k, v in header.items()})
 
@@ -259,7 +262,6 @@ def process_conversion(
         try:
             if in_fmt in ("star", "tsv") and out_fmt in ("box",):
                 assert boxsize is not None, "Expected integer boxsize but got None"
-                print(df)
                 df["w"] = boxsize
                 df["h"] = boxsize
                 for c in ("x", "y", "w", "h"):
