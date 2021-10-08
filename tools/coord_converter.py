@@ -315,6 +315,8 @@ def process_conversion(
                 do_force=do_force,
             )
 
+        _log(f"wrote to {out_path}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
