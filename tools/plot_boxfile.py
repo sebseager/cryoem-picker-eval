@@ -10,6 +10,7 @@ from datetime import datetime
 from cycler import cycler
 from coord_converter import process_conversion
 import matplotlib  # we import pyplot later
+from jaccard import maxbpt
 
 MRC_PLOT_MARGIN = 64
 GT_COLOR = "blue"
@@ -183,7 +184,7 @@ def single_mrc_overlay(
 
     # generate micrograph title
     samp_size_str = "All" if samp_size is None else samp_size
-    fig_title = f"{mrc_name}\n(Sample Size: {samp_size_str})"
+    fig_title = f"{mrc_name}"
     overlay_ax.set_title(fig_title, fontsize=4, pad=3)
 
     extra_artists = []
@@ -233,7 +234,12 @@ if __name__ == "__main__":
     # handle CLI calls
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", required=False, help="Path to micrograph file")
-    parser.add_argument("-b", required=False, nargs="+", help="Path to input BOX files")
+    parser.add_argument(
+        "-g", required=False, nargs=1, help="Path to input ground truth BOX file"
+    )
+    parser.add_argument(
+        "-p", required=False, nargs="+", help="Path to input particle picker BOX files"
+    )
     parser.add_argument(
         "-o",
         required=False,
@@ -243,7 +249,13 @@ if __name__ == "__main__":
         "--samp_size",
         required=False,
         type=int,
-        help="Number of boxes per boxfile to plot (default: 50)",
+        help="Number of boxes per boxfile to plot (default: no downsampling)",
+    )
+    parser.add_argument(
+        "--num_gt",
+        required=False,
+        type=int,
+        help="If ground truth boxfile was provided, use this to downsample instead of samp_size",
     )
     parser.add_argument(
         "--stack_dim",
@@ -278,13 +290,23 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     # input verification
-    if not a.m and not a.b:
+
+    a.g = np.atleast_1d(a.g)
+    box_paths = []
+    if a.g:
+        box_paths.extend(a.g)
+    if a.p:
+        box_paths.extend(a.p)
+
+    if not a.m and not box_paths:
         _log("please specify micrographs or boxfiles or both", 2)
-    if a.b and len(a.b) > len(PICKER_COLORS):
+    if box_paths and len(box_paths) > len(PICKER_COLORS):
         _log("more box files were provided than colors in the available cycle", 2)
 
-    if a.b:
-        a.b = [Path(p).resolve() for p in a.b]
+    if a.g:
+        a.g = [Path(p).resolve() for p in a.g]
+    if a.p:
+        a.p = [Path(p).resolve() for p in a.p]
     if a.o:
         a.o = Path(a.o).resolve()
         if not a.o.is_dir() and not a.force:
@@ -293,14 +315,33 @@ if __name__ == "__main__":
         _log(f"using output directory: {a.o}", quiet=a.quiet)
 
     # convert all input boxfiles to lists of Box namedtuples
-    if a.b:
-        box_dfs = process_conversion(a.b, "box", "box", out_dir=None, quiet=True)
+    boxes = {"gt": [], "pckr": []}
+    for k, paths in {"gt": a.g, "pckr": a.p}.items():
+        if not paths:
+            continue
+        box_dfs = process_conversion(paths, "box", "box", out_dir=None, quiet=True)
         for df in box_dfs.values():
             if "conf" not in df.columns:
                 df["conf"] = 1
-        box_lists = [
+        boxes[k] = [
             list(df.itertuples(name="Box", index=False)) for df in box_dfs.values()
         ]
+
+    if any(not b for b in boxes):
+        _log("did not read in any boxfiles", 2)
+
+    box_lists = []
+    if not boxes["gt"]:
+        box_lists = boxes["pckr"]
+    elif not boxes["pckr"]:
+        box_lists = boxes["gt"]
+    else:
+        # we have both gt and picker boxes - do max bipartite matching
+        _log("computing maximum bipartite matches")
+        gt = boxes["gt"][0]
+        gt = random.sample(gt, len(gt))[: a.num_gt]
+        ixns_list = [maxbpt(gt, p) for p in boxes["pckr"]]
+        box_lists = [gt] + [[ixn.box2 for ixn in ixns] for ixns in ixns_list]
 
     # load mrc
     if a.m:
@@ -324,7 +365,7 @@ if __name__ == "__main__":
     single_mrc_overlay(
         mrc_img,
         box_lists,
-        a.b,
+        box_paths,
         mrc_name,
         out_dir=a.o,
         samp_size=a.samp_size,
