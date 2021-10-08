@@ -235,7 +235,8 @@ def process_conversion(
     for k, v in default_cols.items():
         cols[k] = v if cols[k] == AUTO else cols[k]
 
-    _log(f"using the following input column mapping:\n  {cols}", 0, quiet=quiet)
+    _log(f"using the following input column mapping:", 0, quiet=quiet)
+    _log(f"\t{cols}", 0, quiet=quiet)
 
     out_dfs = {}
     for name, df in dfs.items():
@@ -299,16 +300,13 @@ def process_conversion(
         return out_dfs
 
     for name, df in out_dfs.items():
-        filename = f"{name}{suffix}.{out_fmt}"
+        filename = f"{Path(name).stem}{suffix}.{out_fmt}"
         out_path = Path(out_dir) / filename
         if out_fmt == "star":
             df_to_star(df, out_path, do_force=do_force)
         elif out_fmt in ("box", "tsv"):
-            _log(
-                f"using the following output column order:\n  {out_col_order}",
-                0,
-                quiet=quiet,
-            )
+            _log(f"using the following output column order:", 0, quiet=quiet)
+            _log(f"\t{out_col_order}", 0, quiet=quiet)
             df_to_tsv(
                 df,
                 out_col_order,
@@ -440,3 +438,5 @@ if __name__ == "__main__":
         do_force=a.force,
         quiet=a.quiet,
     )
+
+    _log("done.", 0, quiet=a.quiet)
