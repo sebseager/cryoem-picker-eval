@@ -116,9 +116,6 @@ def star_to_df(path):
         skiprows=header_line_count,
     )
 
-    print(df)
-    print(header_line_count)
-
     # rename columns according to STAR header
     df = df.rename(columns={df.columns[k]: v for k, v in header.items()})
 
