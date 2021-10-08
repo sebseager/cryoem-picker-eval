@@ -277,7 +277,7 @@ def process_conversion(
         except KeyError as e:
             _log(f"did not find column {e} in input columns ({list(df.columns)})", 2)
         except TypeError as e:
-            _log(f"unexpected type in input column(s) ({list(df.columns)})", 2)
+            _log(f"unexpected type in input columns ({e})", 2)
 
         if out_fmt in ("star", "tsv"):
             out_cols = ["x", "y", "conf", "name"]
