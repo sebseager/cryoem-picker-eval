@@ -168,14 +168,17 @@ def single_mrc_overlay(
             :samp_size
         ]  # slicing with None gives whole list
         for box in downsamp_boxarr:
-            rect = patches.Rectangle(
-                (box.x, box.y),
-                box.w,
-                box.h,
-                linewidth=0.4,
-                edgecolor=colors[i],
-                facecolor="none",
-            )
+            try:
+                rect = patches.Rectangle(
+                    (box.x, box.y),
+                    box.w,
+                    box.h,
+                    linewidth=0.4,
+                    edgecolor=colors[i],
+                    facecolor="none",
+                )
+            except AttributeError as e:
+                _log(f"part of input boxfile(s) is improperly formatted ({e})", 2)
             overlay_ax.add_patch(rect)
 
     # generate micrograph title
@@ -220,7 +223,7 @@ def single_mrc_overlay(
         if save_destination.is_file() and not do_force:
             _log("re-run with the force flag to replace existing files", 2)
         overlay_fig.savefig(save_destination, bbox_extra_artists=extra_artists)
-        _log(f"figure saved to: {save_destination}", quiet=quiet)
+        _log(f"figure saved to {save_destination}", quiet=quiet)
     else:
         plt.figure(overlay_fig.number)
         plt.show()
@@ -316,7 +319,7 @@ if __name__ == "__main__":
         _log(f"assuming mrc shape of {max_y} rows, {max_x} cols")
 
     # report run options used
-    _log(f"building overlay_fig: {mrc_name}")
+    _log(f"building overlay figure for {mrc_name}")
 
     single_mrc_overlay(
         mrc_img,
