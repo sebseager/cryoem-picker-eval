@@ -259,6 +259,7 @@ def process_conversion(
         try:
             if in_fmt in ("star", "tsv") and out_fmt in ("box",):
                 assert boxsize is not None, "Expected integer boxsize but got None"
+                print(df)
                 df["w"] = boxsize
                 df["h"] = boxsize
                 for c in ("x", "y", "w", "h"):
