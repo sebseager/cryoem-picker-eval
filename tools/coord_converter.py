@@ -272,11 +272,12 @@ def process_conversion(
                 df["y"] = df["y"] + df["h"].div(2)
 
             if round_to is not None:
-                df["x"] = df["x"].round(round_to)
-                df["y"] = df["y"].round(round_to)
-                if round_to == 0:
-                    df["x"] = df["x"].astype(int)
-                    df["y"] = df["y"].astype(int)
+                for cl in ("x", "y", "w", "h"):
+                    if cl not in df.columns:
+                        continue
+                    df[cl] = df[cl].round(round_to)
+                    if round_to == 0:
+                        df[cl] = df[cl].astype(int)
 
         except KeyError as e:
             _log(f"did not find column {e} in input columns ({list(df.columns)})", 2)
