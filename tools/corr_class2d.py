@@ -1,8 +1,8 @@
 import sys
 import os
 import math
-import ast
 from tqdm import tqdm
+import argparse
 from pathlib import Path
 import warnings
 import numpy as np
@@ -10,16 +10,13 @@ from collections import OrderedDict
 from itertools import combinations, combinations_with_replacement
 import pandas as pd
 import random
-from cycler import cycler
-from functools import reduce
 from scipy.signal import fftconvolve
 from scipy.ndimage.interpolation import rotate
 from skimage.metrics import structural_similarity
 from sklearn.preprocessing import StandardScaler
 import matplotlib
 
-params = {"axes.prop_cycle": cycler(color=PICKER_COLORS)}
-matplotlib.rcParams.update(params)
+matplotlib.use("Agg")
 
 from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
@@ -650,12 +647,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "-n",
         help="Number of class averages to use (if available) from each model.star "
-        "file.",
+        "file (default is 10)",
         type=int,
+        default=10,
     )
     parser.add_argument(
         "--angle_step",
-        help="Angle in degrees by which to rotate " "during correlation",
+        help="Angle in degrees by which to rotate during correlation (default is 15)",
         type=int,
         default=15,
     )
@@ -678,7 +676,7 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     # validation
-    if len(a.m) != len(a.s):
+    if a.s is not None and len(a.m) != len(a.s):
         _log("Number of class average files and STAR files must match", 2)
     if len(a.m) < 2:
         _log("Must have at least two class average files to run correlation", 2)
