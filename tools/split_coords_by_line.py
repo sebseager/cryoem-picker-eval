@@ -2,6 +2,8 @@ import os
 import sys
 import argparse
 import random
+from pathlib import Path
+from tqdm import tqdm
 
 
 def _log(msg, lvl=0, quiet=False):
@@ -28,7 +30,7 @@ def _log(msg, lvl=0, quiet=False):
 
 
 def split_coord_files(paths, out_dir, weights, n_header_lines, do_force=False):
-    for path in paths:
+    for path in tqdm(paths):
         with open(path, "r") as f:
             lines = f.readlines()
 
@@ -50,11 +52,11 @@ def split_coord_files(paths, out_dir, weights, n_header_lines, do_force=False):
             for i in range(len(split_points) - 1)
         ]
 
-        weights.append(1.0 - sum(weights))  # add remainder weight for filename
-
         # write chunks to files
         for i, chunk in enumerate(chunks):
-            subdir = out_dir / f"split{i}_{weights[i] * 100:.0f}_percent"
+            weight = weights[i] if i < len(weights) else 1.0 - sum(weights)
+            subdir = out_dir / f"split{i}_{weight * 100:.0f}_percent"
+            subdir.mkdir(parents=False, exist_ok=True)
             write_path = subdir / path.name
             if not do_force and write_path.exists():
                 _log(f"skipping existing file {write_path}", 1)
@@ -130,3 +132,5 @@ if __name__ == "__main__":
     a.o.mkdir(parents=True, exist_ok=True)
 
     split_coord_files(a.input_files, a.o, a.weights, a.n_header_lines, a.force)
+
+    _log(f"output in {a.o}", 0)
