@@ -235,7 +235,8 @@ def process_conversion(
     for k, v in default_cols.items():
         cols[k] = v if cols[k] == AUTO else cols[k]
 
-    _log(f"using the following input column mapping:\n  {cols}", 0, quiet=quiet)
+    _log(f"using the following input column mapping:", 0, quiet=quiet)
+    _log(f"\t{cols}", 0, quiet=quiet)
 
     out_dfs = {}
     for name, df in dfs.items():
@@ -260,23 +261,30 @@ def process_conversion(
                 assert boxsize is not None, "Expected integer boxsize but got None"
                 df["w"] = boxsize
                 df["h"] = boxsize
+                for c in ("x", "y", "w", "h"):
+                    df[c] = df[c].astype(float)
                 df["x"] = df["x"] - df["w"].div(2)
                 df["y"] = df["y"] - df["h"].div(2)
             elif in_fmt in ("box",) and out_fmt in ("star", "tsv"):
+                for c in ("x", "y", "w", "h"):
+                    df[c] = df[c].astype(float)
                 df["x"] = df["x"] + df["w"].div(2)
                 df["y"] = df["y"] + df["h"].div(2)
 
             if round_to is not None:
-                df["x"] = df["x"].round(round_to)
-                df["y"] = df["y"].round(round_to)
-                if round_to == 0:
-                    df["x"] = df["x"].astype(int)
-                    df["y"] = df["y"].astype(int)
+                for cl in ("x", "y", "w", "h"):
+                    if cl not in df.columns:
+                        continue
+                    df[cl] = df[cl].round(round_to)
+                    if round_to == 0:
+                        df[cl] = df[cl].astype(int)
 
         except KeyError as e:
             _log(f"did not find column {e} in input columns ({list(df.columns)})", 2)
         except TypeError as e:
-            _log(f"unexpected type in input column(s) ({list(df.columns)})", 2)
+            _log(f"unexpected type in input columns ({e})", 2)
+        except ValueError as e:
+            _log(f"unexpected value in input columns ({e})", 2)
 
         if out_fmt in ("star", "tsv"):
             out_cols = ["x", "y", "conf", "name"]
@@ -299,16 +307,13 @@ def process_conversion(
         return out_dfs
 
     for name, df in out_dfs.items():
-        filename = f"{name}{suffix}.{out_fmt}"
+        filename = f"{Path(name).stem}{suffix}.{out_fmt}"
         out_path = Path(out_dir) / filename
         if out_fmt == "star":
             df_to_star(df, out_path, do_force=do_force)
         elif out_fmt in ("box", "tsv"):
-            _log(
-                f"using the following output column order:\n  {out_col_order}",
-                0,
-                quiet=quiet,
-            )
+            _log(f"using the following output column order:", 0, quiet=quiet)
+            _log(f"\t{out_col_order}", 0, quiet=quiet)
             df_to_tsv(
                 df,
                 out_col_order,
@@ -316,6 +321,8 @@ def process_conversion(
                 include_header=include_header,
                 do_force=do_force,
             )
+
+        _log(f"wrote to {out_path}")
 
 
 if __name__ == "__main__":
@@ -440,3 +447,5 @@ if __name__ == "__main__":
         do_force=a.force,
         quiet=a.quiet,
     )
+
+    _log("done.", 0, quiet=a.quiet)
