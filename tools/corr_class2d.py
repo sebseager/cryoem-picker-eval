@@ -606,15 +606,17 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
     corr_fig.add_subplot(ax_heatmap)
     corr_fig.add_subplot(ax_colorbar)
 
-    plt.savefig(out_dir / "heatmap.png", extra_artists=extra_artists)
+    plt.savefig(out_dir / "heatmap.png", bbox_extra_artists=extra_artists)
 
 
 def plot_class_distributions(out_dir, class_avgs):
-    n_cols = len(filtered_class_avg_dicts)
+    n_cols = len(class_avgs)
     dist_fig = plt.figure(figsize=(5.35 * n_cols, 3), dpi=200)
     dist_grid = gs.GridSpec(ncols=n_cols, nrows=1)
 
     for i, class_dict in enumerate(class_avgs.values()):
+        if "sorted_distr" not in class_dict:
+            continue
         ax = dist_fig.add_subplot(dist_grid[0, i])
         xs = list(range(1, len(class_dict["sorted_distr"]) + 1))
         ys = class_dict["sorted_distr"]
