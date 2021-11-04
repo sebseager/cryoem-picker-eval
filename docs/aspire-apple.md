@@ -36,6 +36,7 @@ Create a new conda environment containing the packages in the included `environm
 ```shell script
 conda env create -f pickers/aspire/environment.yml
 conda activate aspire
+conda install -c anaconda pytest && conda install -c conda-forge parameterized
 ```
 
 The new environment will be named `aspire` by default (as specified in the environment file), but `-n your_name_here` can be added to the `conda env create` command to change this name.
