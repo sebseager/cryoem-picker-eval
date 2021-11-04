@@ -31,7 +31,7 @@ def segmentation_f1_score(
         x, y, w, h = round(b.x), round(b.y), round(b.w), round(b.h)
         gt_arr[y : y + h, x : x + w] = 1
     for b in pckr_boxes:
-        if conf_thresh and b.conf < conf_thresh:
+        if conf_thresh is not None and b.conf < conf_thresh:
             continue
         x, y, w, h = round(b.x), round(b.y), round(b.w), round(b.h)
         pckr_arr[y : y + h, x : x + w] = 1
