@@ -194,7 +194,7 @@ class Picker:
         classifier = self.model
         classifier.fit(x, y)
 
-        classifier_proba = CalibratedClassifierCV(self.model, method='sigmoid', cv=None)  # SJHS
+        classifier_proba = CalibratedClassifierCV(self.model, method='sigmoid', cv="prefit")  # SJHS
         classifier_proba.fit(x, y)  # SJHS
 
         mean_all, std_all = PickerHelper.moments(micro_img, self.query_size)
