@@ -69,7 +69,7 @@ def replace_filename(
         to_name += from_name[prev_end : m.start()] + replacement
 
     # put last bit of filename back
-    to_name += from_name[: -matches[-1].end() or None]
+    to_name += from_name[-matches[-1].end() or None :]
 
     # put skipped suffixes back
     to_name += "".join(path.suffixes[-skip_suffixes or None :])
