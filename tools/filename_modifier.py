@@ -63,7 +63,7 @@ def replace_filename(
         _log(f"no matches for substring {substring} in {from_name}", 1)
         return path
 
-    to_name = from_name[: m[0].start()]
+    to_name = from_name[: matches[0].start()]
     for i, m in enumerate(matches):
         next_start = matches[i + 1].start() if i + 1 < len(matches) else None
         to_name += replacement + from_name[m.end() : next_start]
