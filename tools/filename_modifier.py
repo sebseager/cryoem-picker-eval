@@ -79,7 +79,7 @@ def move_file(from_path, to_path, do_force):
     to_path = Path(to_path).expanduser().resolve()
 
     if not do_force and to_path.exists():
-        _log(f"use --force to overwrite existing file {to_file}", lvl=2)
+        _log(f"use --force to overwrite existing file {to_path}", lvl=2)
 
     os.rename(from_path, to_path)
 
@@ -93,7 +93,7 @@ def copy_file(from_path, to_path, do_force):
     to_path = Path(to_path).expanduser().resolve()
 
     if not do_force and to_path.exists():
-        _log(f"use --force to overwrite existing file {to_file}", lvl=2)
+        _log(f"use --force to overwrite existing file {to_path}", lvl=2)
 
     shutil.copy(str(from_path), str(to_path))
 
@@ -107,7 +107,7 @@ def link_file(from_path, to_path, do_force):
     to_path = Path(to_path).expanduser().resolve()
 
     if not do_force and to_path.exists():
-        _log(f"use --force to overwrite existing file {to_file}", lvl=2)
+        _log(f"use --force to overwrite existing file {to_path}", lvl=2)
 
     os.symlink(from_path, to_path)
 
@@ -125,8 +125,18 @@ if __name__ == "__main__":
         choices=("inplace", "link", "copy"),
         default="inplace",
     )
-    parser.add_argument("-f", help="Substring to find", type=str, required=True)
-    parser.add_argument("-r", help="Substring to replace with", type=str, required=True)
+    parser.add_argument(
+        "-f",
+        help="Substring to find (NOTE: single-quote this in bash to prevent parameter expansion)",
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
+        "-r",
+        help="Substring to replace with (NOTE: single-quote this in bash to prevent parameter expansion)",
+        type=str,
+        required=True,
+    )
     parser.add_argument(
         "--skip_suffixes",
         help="Number of extensions (successive dot-delimted strings at end of filename) to ignore",
@@ -156,6 +166,9 @@ if __name__ == "__main__":
     # verification
     if a.skip_first < 0 or a.skip_last < 0 or a.skip_suffixes < 0:
         _log("skip_* args must be >= 0", lvl=2)
+
+    _log(f"find substring: {a.f}")
+    _log(f"replace with substring: {a.r}")
 
     for from_path in tqdm(a.files):
         to_path = replace_filename(
