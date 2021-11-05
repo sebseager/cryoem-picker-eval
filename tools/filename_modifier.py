@@ -53,8 +53,9 @@ def replace_filename(
             1,
         )
 
-    from_name = path.name + "".join(path.suffixes[: -skip_suffixes or None])
-    matches = [m.start() for m in re.finditer(re.escape(substring), from_name)]
+    substring = re.escape(substring)
+    from_name = path.stem + "".join(path.suffixes[: -skip_suffixes or None])
+    matches = [m.start() for m in re.finditer(substring, from_name)]
     matches = matches[skip_first : -skip_last or None]
     if len(matches) == 0:
         _log(f"no matches for substring {substring} in {from_name}", 1)
@@ -66,6 +67,9 @@ def replace_filename(
 
     # put skipped suffixes back
     to_name += "".join(path.suffixes[-skip_suffixes or None :])
+
+    print(path.parent / to_name)
+    quit()
 
     return path.parent / to_name
 
