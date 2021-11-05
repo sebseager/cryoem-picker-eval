@@ -65,7 +65,7 @@ def replace_filename(
 
     to_name = ""
     for i, m in enumerate(matches):
-        start = matches[i - 1] + len(substring) - 1 if i > 0 else 0
+        start = matches[i - 1] + len(substring) + 1 if i > 0 else 0
         to_name += from_name[start:m] + replacement
 
     # put last bit of filename back
@@ -74,7 +74,7 @@ def replace_filename(
     # put skipped suffixes back
     to_name += "".join(path.suffixes[-skip_suffixes or None :])
 
-    print(path.parent / to_name)
+    tqdm.write(f"{from_name} -> {to_name}")
     quit()
 
     return path.parent / to_name
