@@ -54,7 +54,8 @@ def replace_filename(
         )
 
     substring = re.escape(substring)
-    from_name = path.stem + "".join(path.suffixes[: -skip_suffixes or None])
+    exts_len = sum(len(s) for s in path.suffixes)
+    from_name = path.name[:exts_len] + "".join(path.suffixes[: -skip_suffixes or None])
     matches = [m.start() for m in re.finditer(substring, from_name)]
     matches = matches[skip_first : -skip_last or None]
     if len(matches) == 0:
