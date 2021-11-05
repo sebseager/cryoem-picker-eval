@@ -95,4 +95,4 @@ if __name__ == "__main__":
         out_path = os.path.join(a.o, Path(mrc_path).stem + f".{a.f}")
         _save_to_img(mrc, save_path=out_path, force=a.force)
 
-    print(f"Done. Output is in {a.o}")
+    _log(f"Done. Output is in {a.o}")
