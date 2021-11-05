@@ -72,7 +72,6 @@ def replace_filename(
     to_name += "".join(path.suffixes[-skip_suffixes or None :])
 
     tqdm.write(f"{from_name} -> {to_name}")
-    quit()
 
     return path.parent / to_name
 
