@@ -63,13 +63,10 @@ def replace_filename(
         _log(f"no matches for substring {substring} in {from_name}", 1)
         return path
 
-    to_name = ""
+    to_name = from_name[: m[0].start()]
     for i, m in enumerate(matches):
-        prev_end = matches[i - 1].end() + 1 if i > 0 else 0
-        to_name += from_name[prev_end : m.start()] + replacement
-
-    # put last bit of filename back
-    to_name += from_name[-matches[-1].end() or None :]
+        next_start = matches[i + 1].start() if i + 1 < len(matches) else None
+        to_name += replacement + from_name[m.end() : next_start]
 
     # put skipped suffixes back
     to_name += "".join(path.suffixes[-skip_suffixes or None :])
