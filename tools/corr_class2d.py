@@ -499,27 +499,34 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
     topgrid_left = min(topgrid_pos[2])  # [2] is col left pos
     topgrid_midx = (topgrid_left + max(topgrid_pos[3])) / 2  # [3] is col right pos
 
+    # figure out indices where each picker starts in all_imgs
+    pckr_start_idxs = {}
+    tmp_i = 0
+    for pckr_name, pckr in reversed(class_avgs.items()):
+        n = len(pckr["mrcs"]) if len(pckr["mrcs"]) < num_avgs else num_avgs
+        pckr_start_idxs[tmp_i] = {"name": pckr_name, "len": n}
+        tmp_i += n
+
+    print(pckr_start_idxs)
+
     # plot ith class avg image on both axes
     # since this analysis is all-vs-all
+    this_pckr_name = None
+    this_pckr_start_idx = None
+    this_pckr_num_avgs = None
     for i in tqdm(range(num_imgs)):
+        # figure out which picker we're plotting
+        if i in pckr_start_idxs:
+            this_pckr_start_idx = i
+            this_pckr_name = pckr_start_idxs[i]["name"]
+            this_pckr_num_avgs = pckr_start_idxs[i]["len"]
+
+        # class image label
+        class_label_num = this_pckr_num_avgs - (i - this_pckr_start_idx)
 
         # plot images in reverse order
         img_i = num_imgs - i - 1
         img = all_imgs[img_i].copy()
-
-        # class image label
-        class_label_num = (img_i % num_avgs) + 1
-
-        # current picker name
-        pckr_name = ""
-        tmp_i = i
-        for d in reversed(class_avgs.values()):
-            if tmp_i < len(d["mrcs"]):
-                if tmp_i == math.ceil(num_avgs / 2.0):
-                    pckr_name = d["name"]
-                break
-            else:
-                tmp_i -= len(d["mrcs"])
 
         # plot class avg images on both axes
         for j, ax in enumerate(
@@ -537,14 +544,13 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
 
             # j == 0 is horizontal axis
             # coords are (x, y)
-            xytext = (6, -6) if j == 0 else (-8, 6)
 
             # class number
             ax.annotate(
                 class_label_num,
                 xy=(0, 0),
                 xycoords="axes fraction",
-                xytext=xytext,
+                xytext=(6, -6) if j == 0 else (-8, 6),
                 textcoords="offset points",
                 ha="center",
                 va="center",
@@ -552,18 +558,16 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
                 fontsize=6,
             )
 
-            xytext = (6, -20) if j == 0 else (-20, 8)
-
             # picker name
-            if pckr_name != "":
+            if pckr_name is not None and class_label_num == 1:
                 ax.annotate(
-                    pckr_name,
+                    this_pckr_name,
                     xy=(0, 0),
                     xycoords="axes fraction",
-                    xytext=xytext,
+                    xytext=(4, -25) if j == 0 else (-25, 4),
                     textcoords="offset points",
-                    ha="center",
-                    va="center",
+                    ha="left",
+                    va="bottom",
                     rotation=rot,
                     fontsize=8,
                 )
@@ -726,8 +730,13 @@ if __name__ == "__main__":
         for n, arr in corr_arrs.items():
             np.save(a.out_dir / f"corr_{n}.npy", arr)
 
-    plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
+    _log("plotting correlation previews")
+    # plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
+
+    _log("plotting heatmap")
     plot_heatmap(a.out_dir, all_imgs, class_avgs, a.n, corr_arrs["max_scores"])
+
+    _log("plotting class average distributions")
     plot_class_distributions(a.out_dir, class_avgs)
 
     _log("done.", 0, quiet=a.quiet)
