@@ -99,7 +99,7 @@ def read_class_avgs(mrcs_paths, star_paths):
 
     # reorder class avg stacks by particle distribution if STAR available
     for stem, data in class_avgs.items():
-        if "star" not in data or not data["star"]:
+        if "star" not in data or data["star"] is None:
             continue
 
         distr = data["star"]["_rlnClassDistribution"].to_numpy()
@@ -507,8 +507,6 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
         pckr_start_idxs[tmp_i] = {"name": pckr_name, "len": n}
         tmp_i += n
 
-    print(pckr_start_idxs)
-
     # plot ith class avg image on both axes
     # since this analysis is all-vs-all
     this_pckr_name = None
@@ -617,6 +615,10 @@ def plot_class_distributions(out_dir, class_avgs):
     n_cols = len(class_avgs)
     dist_fig = plt.figure(figsize=(5.35 * n_cols, 3), dpi=200)
     dist_grid = gs.GridSpec(ncols=n_cols, nrows=1)
+
+    if all(v["star"] is None for v in class_avgs.values()):
+        _log("skipping class average distribution - no STAR files provided")
+        return
 
     for i, class_dict in enumerate(class_avgs.values()):
         if "sorted_distr" not in class_dict:
@@ -731,7 +733,7 @@ if __name__ == "__main__":
             np.save(a.out_dir / f"corr_{n}.npy", arr)
 
     _log("plotting correlation previews")
-    # plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
+    plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
 
     _log("plotting heatmap")
     plot_heatmap(a.out_dir, all_imgs, class_avgs, a.n, corr_arrs["max_scores"])
