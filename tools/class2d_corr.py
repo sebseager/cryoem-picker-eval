@@ -25,29 +25,8 @@ from matplotlib import patches
 from matplotlib import patheffects
 import seaborn as sns
 from coord_converter import star_to_df
-
-
-def _log(msg, lvl=0, quiet=False):
-    """Format and print message to console with one of the following logging levels:
-    0: info (print and continue execution; ignore if quiet=True)
-    1: warning (print and continue execution)
-    2: error (print and exit with code 1)
-    """
-
-    if lvl == 0 and quiet:
-        return
-
-    prefix = ""
-    if lvl == 0:
-        prefix = "INFO: "
-    elif lvl == 1:
-        prefix = "WARN: "
-    elif lvl == 2:
-        prefix = "CRITICAL: "
-
-    print(f"{prefix}{msg}")
-    if lvl == 2:
-        sys.exit(1)
+from common import log
+from consts import *
 
 
 def _format_axes(ax):
@@ -128,13 +107,13 @@ def load_np_files(out_dir, do_recalc_all=False):
     arrs = {n: None for n in names}
 
     if do_recalc_all:
-        _log("recalculating all correlations")
+        log("recalculating all correlations")
         return arrs
 
     for n, p in paths.items():
         try:
             arrs[n] = np.load(p, allow_pickle=True)
-            _log(f"found existing data for: {n}")
+            log(f"found existing data for: {n}")
         except FileNotFoundError:
             pass
 
@@ -229,7 +208,7 @@ def find_largest_square_fast(arr):
     col_min, col_max = np.min(idx[1]), np.max(idx[1])
 
     if not (row_min == col_min and row_max == col_max):
-        _log("mask not centered - falling back to slower method", 1)
+        log("mask not centered - falling back to slower method", 1)
         return find_largest_square(arr)
 
     # circle diameter
@@ -348,9 +327,40 @@ def build_corrs(all_imgs, angle_step, do_noise_zeros=False):
                 global_max_points[j, k] = max_points[i_score]
 
             except (NameError, IndexError) as e:
-                _log("couldn't assign max corr. score\n" + str(e), 1)
+                log("couldn't assign max corr. score\n" + str(e), 1)
 
     return max_scores, best_angles, best_corrs, global_max_points
+
+
+def id_pckr_by_idx(idx, class_avgs, num_max_avgs):
+    """Given an index into all_imgs and class average data, return
+    the picker name, number of averages, and start index. We want to figure
+    out where each picker starts in all_imgs.
+    """
+
+    tmp_i = 0
+    for pckr_name, pckr in reversed(class_avgs.items()):
+        n = len(pckr["mrcs"]) if len(pckr["mrcs"]) < num_max_avgs else num_max_avgs
+        if tmp_i + n > idx:
+            return (pckr_name, n, tmp_i)
+        tmp_i += n
+
+    log("couldn't find picker for idx %s" % idx, 1)
+
+
+def get_pckr_idx_range(name, class_avgs, num_max_avgs):
+    """Given a picker name and class average data, return the
+    start and end indices of the picker in all_imgs.
+    """
+
+    tmp_i = 0
+    for pckr_name, pckr in reversed(class_avgs.items()):
+        n = len(pckr["mrcs"]) if len(pckr["mrcs"]) < num_max_avgs else num_max_avgs
+        if pckr_name == name:
+            return (tmp_i, tmp_i + n)
+        tmp_i += n
+
+    log("picker %s not found in class averages" % name, 2)
 
 
 def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
@@ -366,10 +376,16 @@ def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
 
     # iterate over each picker combo
     for combo_i, combo in enumerate(tqdm(class_name_combos)):
-        pckr_x_i = class_names.index(combo[1])
-        pckr_y_i = class_names.index(combo[0])
-        imgs_x_slice = [pckr_x_i * num_avgs, pckr_x_i * num_avgs + num_avgs]
-        imgs_y_slice = [pckr_y_i * num_avgs, pckr_y_i * num_avgs + num_avgs]
+        pckr_x_name = combo[1]
+        pckr_y_name = combo[0]
+
+        imgs_x_slice = get_pckr_idx_range(pckr_x_name, class_avgs, num_avgs)
+        imgs_y_slice = get_pckr_idx_range(pckr_y_name, class_avgs, num_avgs)
+
+        # pckr_x_i = class_names.index(combo[1])
+        # pckr_y_i = class_names.index(combo[0])
+        # imgs_x_slice = [pckr_x_i * num_avgs, pckr_x_i * num_avgs + num_avgs]
+        # imgs_y_slice = [pckr_y_i * num_avgs, pckr_y_i * num_avgs + num_avgs]
 
         imgs_x = all_imgs[slice(*imgs_x_slice)]
         imgs_y = all_imgs[slice(*imgs_y_slice)]
@@ -499,26 +515,12 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
     topgrid_left = min(topgrid_pos[2])  # [2] is col left pos
     topgrid_midx = (topgrid_left + max(topgrid_pos[3])) / 2  # [3] is col right pos
 
-    # figure out indices where each picker starts in all_imgs
-    pckr_start_idxs = {}
-    tmp_i = 0
-    for pckr_name, pckr in reversed(class_avgs.items()):
-        n = len(pckr["mrcs"]) if len(pckr["mrcs"]) < num_avgs else num_avgs
-        pckr_start_idxs[tmp_i] = {"name": pckr_name, "len": n}
-        tmp_i += n
-
-    # plot ith class avg image on both axes
-    # since this analysis is all-vs-all
-    this_pckr_name = None
-    this_pckr_start_idx = None
-    this_pckr_num_avgs = None
+    # plot ith class avg image on both axes since this analysis is all-vs-all
     for i in tqdm(range(num_imgs)):
         # figure out which picker we're plotting
-        if i in pckr_start_idxs:
-            this_pckr_start_idx = i
-            this_pckr_name = pckr_start_idxs[i]["name"]
-            this_pckr_num_avgs = pckr_start_idxs[i]["len"]
-
+        this_pckr_name, this_pckr_num_avgs, this_pckr_start_idx = id_pckr_by_idx(
+            i, class_avgs, num_avgs
+        )
         # class image label
         class_label_num = this_pckr_num_avgs - (i - this_pckr_start_idx)
 
@@ -557,14 +559,14 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
             )
 
             # picker name
-            if pckr_name is not None and class_label_num == 1:
+            if this_pckr_name is not None and class_label_num == 1:
                 ax.annotate(
                     this_pckr_name,
                     xy=(0, 0),
                     xycoords="axes fraction",
-                    xytext=(4, -25) if j == 0 else (-25, 4),
+                    xytext=(8, -25) if j == 0 else (-25, 4),
                     textcoords="offset points",
-                    ha="left",
+                    ha="right" if j == 0 else "left",
                     va="bottom",
                     rotation=rot,
                     fontsize=8,
@@ -617,7 +619,7 @@ def plot_class_distributions(out_dir, class_avgs):
     dist_grid = gs.GridSpec(ncols=n_cols, nrows=1)
 
     if all(v["star"] is None for v in class_avgs.values()):
-        _log("skipping class average distribution - no STAR files provided")
+        log("skipping class average distribution - no STAR files provided")
         return
 
     for i, class_dict in enumerate(class_avgs.values()):
@@ -633,10 +635,53 @@ def plot_class_distributions(out_dir, class_avgs):
     plt.savefig(out_dir / "class_avg_dists.png")
 
 
+def plot_max_score_hist(
+    out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=10, bins=50
+):
+    # find each non-ground-truth class avg's best score against ground truth
+    print(class_avgs)
+    print(max_scores)
+
+    # select GT-vs-all scores
+    gt_slice = get_pckr_idx_range(gt_name, class_avgs, num_avgs)
+    scores = np.flip(max_scores)[slice(*gt_slice), :]
+
+    # nan out scores for GT-vs-GT
+    scores[:, slice(*gt_slice)] = np.nan
+
+    # get max score for each class avg against GT
+    # ignore RuntimeWarning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        maxes = np.nanmax(scores, axis=0)
+
+    # plot histogram
+    hist_fig, hist_ax = plt.subplots(figsize=(5, 3), dpi=200)
+
+    for i, pckr_name in enumerate(class_avgs.keys()):
+        pckr_slice = get_pckr_idx_range(pckr_name, class_avgs, num_avgs)
+        try:
+            y, edges = np.histogram(maxes[slice(*pckr_slice)], bins=bins)
+        except ValueError:
+            continue  # skip all-nan slices
+        centers = 0.5 * (edges[1:] + edges[:-1])
+        plt.plot(centers, y, color=PICKER_COLORS[i], label=pckr_name)
+
+    hist_ax.set_xlabel("Max Correlation Score")
+    hist_ax.set_ylabel("Frequency")
+    hist_ax.legend(loc="best", frameon=False)
+    plt.savefig(out_dir / "max_score_hist.png", bbox_inches="tight")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="This script builds a correlation matrix from input RELION 2D "
         "class average files."
+    )
+    parser.add_argument(
+        "out_dir",
+        help="Output directory in which to store generated temporary data and final "
+        "heatmap (will be created if it does not exist)",
     )
     parser.add_argument(
         "-m",
@@ -654,11 +699,6 @@ if __name__ == "__main__":
         default=(),
     )
     parser.add_argument(
-        "out_dir",
-        help="Output directory in which to store generated temporary data and final "
-        "heatmap (will be created if it does not exist)",
-    )
-    parser.add_argument(
         "-n",
         help="Number of class averages to use (if available) from each model.star "
         "file (default is 10)",
@@ -672,6 +712,12 @@ if __name__ == "__main__":
         default=15,
     )
     parser.add_argument(
+        "--gt_name",
+        help="Name of ground truth image stack in files passed to -m (default is 'GT')",
+        type=str,
+        default="GT",
+    )
+    parser.add_argument(
         "--noise",
         help="Replace RELION zero mask with random noise",
         action="store_true",
@@ -681,30 +727,29 @@ if __name__ == "__main__":
         help="Overwrite (recalculate) any temporary data files in output directory",
         action="store_true",
     )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Silence info-level output",
-    )
 
     a = parser.parse_args()
 
     # validation
     if a.s and len(a.m) != len(a.s):
-        _log("Number of class average files and STAR files must match", 2)
+        log("Number of class average files and STAR files must match", 2)
     if len(a.m) < 2:
-        _log("Must have at least two class average files to run correlation", 2)
+        log("Must have at least two class average files to run correlation", 2)
 
     # normalize paths
     a.m = [Path(p).resolve() for p in np.atleast_1d(a.m)]
     if not all(p.is_file() for p in a.m):
-        _log(f"bad mrcs paths", 2)
+        log(f"bad mrcs paths", 2)
     a.s = [Path(p).resolve() for p in np.atleast_1d(a.s)]
     if not all(p.is_file() for p in a.s):
-        _log(f"bad mrcs paths", 2)
+        log(f"bad mrcs paths", 2)
     a.out_dir = Path(a.out_dir).resolve()
     if not a.out_dir.is_dir():
         os.makedirs(a.out_dir, exist_ok=True)
+
+    # more validation
+    if a.gt_name not in [x.stem for x in a.m]:
+        log("Ground truth name must match one of the file stems passed in -m", 2)
 
     class_avgs, class_names = read_class_avgs(a.m, a.s)
 
@@ -715,7 +760,7 @@ if __name__ == "__main__":
     do_recalc = any(v is None for v in corr_arrs.values())
 
     if do_recalc:
-        _log("calculating correlations")
+        log("calculating correlations")
 
         (
             corr_arrs["max_scores"],
@@ -732,13 +777,16 @@ if __name__ == "__main__":
         for n, arr in corr_arrs.items():
             np.save(a.out_dir / f"corr_{n}.npy", arr)
 
-    _log("plotting correlation previews")
-    plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
+    # log("plotting correlation previews")
+    # plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
 
-    _log("plotting heatmap")
-    plot_heatmap(a.out_dir, all_imgs, class_avgs, a.n, corr_arrs["max_scores"])
+    # log("plotting heatmap")
+    # plot_heatmap(a.out_dir, all_imgs, class_avgs, a.n, corr_arrs["max_scores"])
 
-    _log("plotting class average distributions")
-    plot_class_distributions(a.out_dir, class_avgs)
+    # log("plotting class average distributions")
+    # plot_class_distributions(a.out_dir, class_avgs)
 
-    _log("done.", 0, quiet=a.quiet)
+    log("plotting correlation max score histogram")
+    plot_max_score_hist(a.out_dir, corr_arrs["max_scores"], class_avgs, a.gt_name, a.n)
+
+    log("done.", 0)
