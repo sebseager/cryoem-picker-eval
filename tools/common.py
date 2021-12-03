@@ -60,7 +60,7 @@ def style_ax(ax, xlab="", ylab="", aspect="auto", xlim=None, ylim=None):
             color="k",
             labelsize=12,
         )
-        ax.grid(color="gray", ls=":", lw=0.5)
+        ax.grid(color="gray", ls=":", lw=0.5, alpha=0.5)
 
         # set aspect ratio
         # values can be "auto", "equal" (same as 1), or a float
