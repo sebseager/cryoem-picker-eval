@@ -443,7 +443,7 @@ class Picker:
         center = config.apple.mrc_shrink_factor * center
 
         # swap columns to align with Relion
-        center = center[:, [1, 0]]
+        center[:, [0, 1]] = center[:, [1, 0]]
 
         # first column is x; second column is y - offset by margins that were discarded from the image
         center[:, 0] += config.apple.mrc_margin_left
