@@ -204,8 +204,12 @@ def find_largest_square_fast(arr):
 
     # calculate center of shifted mask
     idx = np.where(mask_shift != 0)
-    row_min, row_max = np.min(idx[0]), np.max(idx[0])
-    col_min, col_max = np.min(idx[1]), np.max(idx[1])
+    try:
+        row_min, row_max = np.min(idx[0]), np.max(idx[0])
+        col_min, col_max = np.min(idx[1]), np.max(idx[1])
+    except ValueError:
+        log("array is empty - no mask found")
+        return 0, 0, 0
 
     if not (row_min == col_min and row_max == col_max):
         log("mask not centered - falling back to slower method", 1)
@@ -332,7 +336,7 @@ def build_corrs(all_imgs, angle_step, do_noise_zeros=False):
     return max_scores, best_angles, best_corrs, global_max_points
 
 
-def id_pckr_by_idx(idx, class_avgs, num_max_avgs):
+def id_pckr_by_idx(idx, class_avgs, num_max_avgs=None):
     """Given an index into all_imgs and class average data, return
     the picker name, number of averages, and start index. We want to figure
     out where each picker starts in all_imgs.
@@ -340,7 +344,9 @@ def id_pckr_by_idx(idx, class_avgs, num_max_avgs):
 
     tmp_i = 0
     for pckr_name, pckr in reversed(class_avgs.items()):
-        n = len(pckr["mrcs"]) if len(pckr["mrcs"]) < num_max_avgs else num_max_avgs
+        n = len(pckr["mrcs"])
+        if num_max_avgs is not None and n > num_max_avgs:
+            n = num_max_avgs
         if tmp_i + n > idx:
             return (pckr_name, n, tmp_i)
         tmp_i += n
@@ -348,14 +354,16 @@ def id_pckr_by_idx(idx, class_avgs, num_max_avgs):
     log("couldn't find picker for idx %s" % idx, 1)
 
 
-def get_pckr_idx_range(name, class_avgs, num_max_avgs):
+def get_pckr_idx_range(name, class_avgs, num_max_avgs=None):
     """Given a picker name and class average data, return the
     start and end indices of the picker in all_imgs.
     """
 
     tmp_i = 0
     for pckr_name, pckr in reversed(class_avgs.items()):
-        n = len(pckr["mrcs"]) if len(pckr["mrcs"]) < num_max_avgs else num_max_avgs
+        n = len(pckr["mrcs"])
+        if num_max_avgs is not None and n > num_max_avgs:
+            n = num_max_avgs
         if pckr_name == name:
             return (tmp_i, tmp_i + n)
         tmp_i += n
@@ -635,15 +643,11 @@ def plot_class_distributions(out_dir, class_avgs):
     plt.savefig(out_dir / "class_avg_dists.png")
 
 
-def plot_max_score_hist(
-    out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=10, bins=50
-):
+def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", bins=20):
     # find each non-ground-truth class avg's best score against ground truth
-    print(class_avgs)
-    print(max_scores)
 
     # select GT-vs-all scores
-    gt_slice = get_pckr_idx_range(gt_name, class_avgs, num_avgs)
+    gt_slice = get_pckr_idx_range(gt_name, class_avgs, None)
     scores = np.flip(max_scores)[slice(*gt_slice), :]
 
     # nan out scores for GT-vs-GT
@@ -653,13 +657,14 @@ def plot_max_score_hist(
     # ignore RuntimeWarning
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
+        print(max_scores)
         maxes = np.nanmax(scores, axis=0)
 
     # plot histogram
     hist_fig, hist_ax = plt.subplots(figsize=(5, 3), dpi=200)
 
     for i, pckr_name in enumerate(class_avgs.keys()):
-        pckr_slice = get_pckr_idx_range(pckr_name, class_avgs, num_avgs)
+        pckr_slice = get_pckr_idx_range(pckr_name, class_avgs, None)
         try:
             y, edges = np.histogram(maxes[slice(*pckr_slice)], bins=bins)
         except ValueError:
@@ -752,6 +757,8 @@ if __name__ == "__main__":
         log("Ground truth name must match one of the file stems passed in -m", 2)
 
     class_avgs, class_names = read_class_avgs(a.m, a.s)
+
+    print([x["mrcs"].shape for x in class_avgs.values()])
 
     corr_arrs = load_np_files(a.out_dir, do_recalc_all=a.force)
 
