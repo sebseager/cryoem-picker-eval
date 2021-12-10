@@ -74,9 +74,8 @@ Outputs
 
 ### Configuration
 
-[TODO: SORT OUT ASPIRE CONFIG CMD, and/or whether config.ini is read from conda package (doesn't seem like it)]
+There are several configurable parameters hard-coded in `pickers/aspire/src/aspire/config.ini`, including the following.
 
-There are several configurable parameters hard-coded in `pickers/aspire/src/aspire/config.ini`, including the following. [TODO: FIGURE OUT DEFINITIONS FOR EACH IF POSSIBLE]
 - `particle_size` (default: 78)
 - `query_image_size` (default: 52)
 - `max_particle_size` (default: 156)

@@ -299,9 +299,10 @@ class Picker:
             segmentation_proba, (_segmentation_shape, _segmentation_shape), "F"
         )  # SJHS
 
-        import pdb
-
-        pdb.set_trace()
+        # SJHS - TESTING ONLY
+        # make sure segmentation_proba is giving the same results as segmentation
+        # np.savetxt("apple_segmentation_proba.csv", segmentation_proba, delimiter=",")
+        # np.savetxt("apple_segmentation.csv", segmentation, delimiter=",")
 
         return segmentation.copy(), segmentation_proba.copy()  # SJHS
 
