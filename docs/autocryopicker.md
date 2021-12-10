@@ -40,10 +40,10 @@ Use the following to run AutoCryoPicker on micrograph files:
 ```shell script
 out_dir=/path/to/out/dir/
 for f in /full/path/to/pngs/*.png; do
-	out_name=\$(basename \$f)
-	label_file="${out_dir}/\${out_name%.png}.box"
-	matlab -nosplash -nodisplay -r "mrc='\$f';out_dir='\$out_dir';AutoPicker_Final_Demo" -logfile "\$label_file"
-	awk '/AUTOCRYOPICKER_DETECTIONS_START/ ? c++ : c' \${label_file} > \${label_file/.box/.tmp} && mv \${label_file/.box/.tmp} \${label_file}
+	out_name=$(basename $f)
+	label_file="${out_dir}/${out_name%.png}.box"
+	matlab -nosplash -nodisplay -r "mrc='$f';out_dir='$out_dir';AutoPicker_Final_Demo" -logfile "$label_file"
+	awk '/AUTOCRYOPICKER_DETECTIONS_START/ ? c++ : c' ${label_file} > ${label_file/.box/.tmp} && mv ${label_file/.box/.tmp} ${label_file}
 done
 ```
 
