@@ -35,16 +35,16 @@ Assuming the MATLAB executable is available at the `matlab` command. Yale HPC us
 module load MATLAB/2020b
 ```
 
-Use the following to run AutoCryoPicker on a single micrograph:
+Use the following to run AutoCryoPicker on micrograph files:
 
 ```shell script
-png_file=/full/path/to/mrc.png  # modify this
-out_name=$(basename $png_file) && label_file="${out_name%.png}.box"
-matlab -nosplash -nodisplay -r "mrc='$png_file';AutoPicker_Final_Demo" -logfile "$label_file"
+out_dir=/path/to/out/dir/
+for f in /full/path/to/pngs/*.png; do
+	out_name=$(basename $f)
+	label_file="${out_dir}/${out_name%.png}.box"
+	matlab -nosplash -nodisplay -r "mrc='$f';out_dir='$out_dir';AutoPicker_Final_Demo" -logfile "$label_file"
+	awk '/AUTOCRYOPICKER_DETECTIONS_START/ ? c++ : c' ${label_file} > ${label_file/.box/.tmp} && mv ${label_file/.box/.tmp} ${label_file}
+done
 ```
 
-Finally, assuming the output of the above command has not been moved, run the following to remove any headers prepended by MATLAB:
-
-```shell script
-awk '/AUTOCRYOPICKER_DETECTIONS_START/ ? c++ : c' "$label_file" > "$label_file"
-```
+The last line of the above script removes any headers prepended by MATLAB.

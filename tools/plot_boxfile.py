@@ -11,18 +11,7 @@ from cycler import cycler
 from coord_converter import process_conversion
 import matplotlib  # we import pyplot later
 from jaccard import maxbpt
-
-MRC_PLOT_MARGIN = 64
-GT_COLOR = "blue"
-PICKER_COLORS = [
-    "#ff7f00",
-    "#4daf4a",
-    "#f781bf",
-    "#a65628",
-    "#984ea3",
-    "#e41a1c",
-    "#dede00",
-]
+from consts import *
 
 matplotlib.rcParams["axes.prop_cycle"] = cycler(color=[GT_COLOR] + PICKER_COLORS)
 from matplotlib import patches

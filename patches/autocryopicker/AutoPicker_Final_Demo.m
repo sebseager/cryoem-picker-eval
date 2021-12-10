@@ -12,7 +12,7 @@ str=mrc;
 originalImage=imread(str);
 % originalImage=rgb2gray(originalImage);
 originalImage = imresize(originalImage,.5);
-imwrite(originalImage,'originalImage.png');
+imwrite(originalImage,fullfile(out_dir,'originalImage.png'));
 figure;
 imshow(originalImage); title('Original Cryo-Image');
 figure; imhist(originalImage);title('Histogram of the Original Cryo-Image');
@@ -25,7 +25,7 @@ figure; imhist(originalImage);title('Histogram of the Original Cryo-Image');
 z=mat2gray(originalImage);
 figure;imshow(z);title('Normalized cryo-EM Image')
 figure; imhist(z);title('Histogram of the Cryo-Image');
-imwrite(z,'Normalized.png');
+imwrite(z,fullfile(out_dir,'Normalized.png'));
 % 
 % Normalized_I = imcrop(z,[761.5 280.25 111 98.9999999999999]);
 % imwrite(Normalized_I,'Normalized_cropped.png');
@@ -36,7 +36,7 @@ limit=stretchlim(Inormalized);
 CEC_Image_Adjusment=imadjust(Inormalized,[limit(1) limit(2)]);  
 figure;imshow(CEC_Image_Adjusment);title('CEC Image Adjusment')
 figure; imhist(CEC_Image_Adjusment);title('Histogram of the Cryo-Image');
-imwrite(CEC_Image_Adjusment,'CEC.png');
+imwrite(CEC_Image_Adjusment,fullfile(out_dir,'CEC.png'));
 
 % CEC_Image_Adjusment_I = imcrop(CEC_Image_Adjusment,[761.5 280.25 111 98.9999999999999]);
 % imwrite(CEC_Image_Adjusment_I,'CEC_cropped.png');
@@ -45,7 +45,7 @@ imwrite(CEC_Image_Adjusment,'CEC.png');
 Cryo_EM_Histogram_Equalization = histeq(CEC_Image_Adjusment);
 figure; imshow(Cryo_EM_Histogram_Equalization); title('Cryo-EM Histogram Equalization');
 figure; imhist(Cryo_EM_Histogram_Equalization);title('Histogram of the Cryo-Image');
-imwrite(Cryo_EM_Histogram_Equalization,'HE.png');
+imwrite(Cryo_EM_Histogram_Equalization,fullfile(out_dir,'HE.png'));
 
 % Cryo_EM_Histogram_Equalization_I = imcrop(Cryo_EM_Histogram_Equalization,[761.5 280.25 111 98.9999999999999]);
 % imwrite(Cryo_EM_Histogram_Equalization_I,'HE_cropped.png');
@@ -54,7 +54,7 @@ imwrite(Cryo_EM_Histogram_Equalization,'HE.png');
 Cryo_EM_Restoration = wiener2(Cryo_EM_Histogram_Equalization,[5 5]);
 figure; imshow(Cryo_EM_Restoration); title('Cryo-EM Restoration');
 figure; imhist(Cryo_EM_Restoration);title('Histogram of the Restored Cryo-Image');
-imwrite(Cryo_EM_Restoration,'Restored.png');
+imwrite(Cryo_EM_Restoration,fullfile(out_dir,'Restored.png'));
 
 % Cryo_EM_Restoration_I = imcrop(Cryo_EM_Restoration,[761.5 280.25 111 98.9999999999999]);
 % imwrite(Cryo_EM_Restoration_I,'Restored_cropped.png');
@@ -65,7 +65,7 @@ Adaptive_Histogram_Equlaizer=adapthisteq(Adaptive_Histogram_Equlaizer,'clipLimit
 Adaptive_Histogram_Equlaizer=adapthisteq(Adaptive_Histogram_Equlaizer,'clipLimit',.99,'Distribution','rayleigh');
 figure;imshow(Adaptive_Histogram_Equlaizer);title('Adaptive Cryo-EM Histo-Equal.')
 figure; imhist(Adaptive_Histogram_Equlaizer);title('Histogram of the Adaptive Cryo-EM Histo-Equal.');
-imwrite(Adaptive_Histogram_Equlaizer,'Adaptive_Histogram_Equlaizer.png');
+imwrite(Adaptive_Histogram_Equlaizer,fullfile(out_dir,'Adaptive_Histogram_Equlaizer.png'));
 
 % Adaptive_Histogram_Equlaizer_I = imcrop(Adaptive_Histogram_Equlaizer,[761.5 280.25 111 98.9999999999999]);
 % imwrite(Adaptive_Histogram_Equlaizer_I,'Adaptive_Histogram_Equlaizer_cropped.png');
@@ -78,7 +78,7 @@ Gaudided_Filtering=imguidedfilter(Gaudided_Filtering);
 Gaudided_Filtering=imadjust(Gaudided_Filtering);
 figure;imshow(Gaudided_Filtering);title('Gaudided Filtering')
 figure; imhist(Gaudided_Filtering);title('Histogram of the Gaudided Filtering');
-imwrite(Gaudided_Filtering,'Gaudided.png');
+imwrite(Gaudided_Filtering,fullfile(out_dir,'Gaudided.png'));
 
 % Gaudided_Filtering_I = imcrop(Gaudided_Filtering,[761.5 280.25 111 98.9999999999999]);
 % imwrite(Gaudided_Filtering_I,'Gaudided_Filtering_cropped.png');
@@ -91,10 +91,10 @@ Morphological_Image=imopen(Morphological_Image,strel('disk',1));
 Morphological_Image=imopen(Morphological_Image,strel('disk',1));
 figure;imshow(Morphological_Image);title('Morphological Image Operation')
 figure; imhist(Morphological_Image);title('Histogram of Morphological Image Operation');
-imwrite(Morphological_Image,'Morphological.png');
+imwrite(Morphological_Image,fullfile(out_dir,'Morphological.png'));
 
 Morphological_Image_I = imcrop(Morphological_Image,[381 140 56 50]);
-imwrite(Morphological_Image_I,'Morphological_cropped.png');
+imwrite(Morphological_Image_I,fullfile(out_dir,'Morphological_cropped.png'));
 %
 close all;
 %% Particles Picking using Our Approach (ICB)....
@@ -181,6 +181,11 @@ close all;
 
     % PATCHED - stop execution here to avoid writing everything else to stdout
     quit(0,"force")
+    
+
+
+
+
     
 
 

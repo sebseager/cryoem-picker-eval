@@ -9,7 +9,9 @@ from coord_converter import process_conversion
 from sklearn.metrics import f1_score
 
 
-def segmentation_f1_score(gt_boxes, pckr_boxes, conf_thresh=0, mrc_w=None, mrc_h=None):
+def segmentation_f1_score(
+    gt_boxes, pckr_boxes, conf_thresh=None, mrc_w=None, mrc_h=None
+):
     """Calculate a score between ground truth and picker box lists by creating a
     segmentation map for each and computing the F1 score between them. Optionally
     provide micrograph width and height to fix segmentation map size.
@@ -29,7 +31,7 @@ def segmentation_f1_score(gt_boxes, pckr_boxes, conf_thresh=0, mrc_w=None, mrc_h
         x, y, w, h = round(b.x), round(b.y), round(b.w), round(b.h)
         gt_arr[y : y + h, x : x + w] = 1
     for b in pckr_boxes:
-        if b.conf < conf_thresh:
+        if conf_thresh is not None and b.conf < conf_thresh:
             continue
         x, y, w, h = round(b.x), round(b.y), round(b.w), round(b.h)
         pckr_arr[y : y + h, x : x + w] = 1
@@ -58,6 +60,11 @@ if __name__ == "__main__":
         help="Particle picker coordinate file(s)",
         nargs="+",
         required=True,
+    )
+    parser.add_argument(
+        "-c",
+        help="Confidence threshold",
+        type=int,
     )
     parser.add_argument(
         "--height", help="Micrograph height (pixels)", type=int, default=None
@@ -104,7 +111,7 @@ if __name__ == "__main__":
         pckr_boxes = list(pckr_df.itertuples(name="Box", index=False))
 
         score = segmentation_f1_score(
-            gt_boxes, pckr_boxes, conf_thresh=0, mrc_w=a.width, mrc_h=a.height
+            gt_boxes, pckr_boxes, conf_thresh=a.c, mrc_w=a.width, mrc_h=a.height
         )
         all_scores.append(score)
 

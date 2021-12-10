@@ -19,16 +19,16 @@ The APPLEpicker paper can be found [here](https://doi.org/10.1016/j.jsb.2018.08.
 
 ASPIRE must be installed into its own conda environment. It can be obtained either as a pip-installable package or via its git repository. Because this guide includes several patches, it will follow the latter method.
 
-First, clone the ASPIRE repo into `pickers/aspire/` using 
+During the course of our experiments, we have created a set of patches for APPLEpicker. The files we made modifications to are `helper.py`, `picking.py`, and `apple.py` in `src/aspire/apple/`. If you would like to use these changes, run
+
+```shell script
+cp -r patches/aspire/ pickers/aspire
+```
+
+Otherwise, to use the respository maintained by ASPIRE authors, clone the ASPIRE repo into `pickers/aspire/` using 
 
 ```shell script
 git clone https://github.com/ComputationalCryoEM/ASPIRE-Python.git pickers/aspire
-```
-
-During the course of our experiments, we have created a set of patches for APPLEpicker. If you would like to apply these changes, run the patch script included in `cryo-docs/patches/aspire`. This script will replace `apple.py`, `helper.py`, and `picking.py` in the `pickers/aspire/src/aspire/apple/` directory with our patched versions.
-
-```shell script
-sh patches/aspire/patch-aspire.sh pickers/aspire/
 ```
 
 Create a new conda environment containing the packages in the included `environment.yml` file.
@@ -36,11 +36,12 @@ Create a new conda environment containing the packages in the included `environm
 ```shell script
 conda env create -f pickers/aspire/environment.yml
 conda activate aspire
+conda install -c anaconda pytest && conda install -c conda-forge parameterized
 ```
 
 The new environment will be named `aspire` by default (as specified in the environment file), but `-n your_name_here` can be added to the `conda env create` command to change this name.
 
-The ASPIRE README recommends running their provided unit tests before installing. (Note that due to modifications made to the APPLEpicker source by our patch script above, the `testPickCenters` unit test may fail. The rest of the tests should pass with a handful of `FutureWarning`s, `DeprecationWarning`s, etc.)
+The ASPIRE README recommends running their provided unit tests before installing. (Note that due to modifications we made to the APPLEpicker source, the `testPickCenters` unit test may fail. The rest of the tests should pass with a handful of `FutureWarning`s, `DeprecationWarning`s, etc.)
 
 ```shell script
 (cd pickers/aspire && PYTHONPATH=./src pytest tests)
@@ -73,9 +74,8 @@ Outputs
 
 ### Configuration
 
-[TODO: SORT OUT ASPIRE CONFIG CMD, and/or whether config.ini is read from conda package (doesn't seem like it)]
+There are several configurable parameters hard-coded in `pickers/aspire/src/aspire/config.ini`, including the following.
 
-There are several configurable parameters hard-coded in `pickers/aspire/src/aspire/config.ini`, including the following. [TODO: FIGURE OUT DEFINITIONS FOR EACH IF POSSIBLE]
 - `particle_size` (default: 78)
 - `query_image_size` (default: 52)
 - `max_particle_size` (default: 156)
