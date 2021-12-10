@@ -19,7 +19,7 @@ The APPLEpicker paper can be found [here](https://doi.org/10.1016/j.jsb.2018.08.
 
 ASPIRE must be installed into its own conda environment. It can be obtained either as a pip-installable package or via its git repository. Because this guide includes several patches, it will follow the latter method.
 
-During the course of our experiments, we have created a set of patches for APPLEpicker. If you would like to use these changes, run
+During the course of our experiments, we have created a set of patches for APPLEpicker. The files we made modifications to are `helper.py`, `picking.py`, and `apple.py` in `src/aspire/apple/`. If you would like to use these changes, run
 
 ```shell script
 cp -r patches/aspire/ pickers/aspire
