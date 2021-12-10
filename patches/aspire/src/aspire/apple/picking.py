@@ -299,6 +299,10 @@ class Picker:
             segmentation_proba, (_segmentation_shape, _segmentation_shape), "F"
         )  # SJHS
 
+        import pdb
+
+        pdb.set_trace()
+
         return segmentation.copy(), segmentation_proba.copy()  # SJHS
 
     def morphology_ops(self, segmentation):
