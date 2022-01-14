@@ -606,11 +606,12 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
 
     # heatmap proper
     # np.flip flips both axes by default
+    to_plot = np.flip(max_scores)
     lo = math.floor(max_scores.min() * 10) / 10
     hi = math.ceil(max_scores.max() * 10) / 10
     cmap = plt.get_cmap("coolwarm").copy()
     heatmap = sns.heatmap(
-        np.flip(max_scores),
+        to_plot,
         mask=mask,
         cmap=cmap,
         vmin=lo,
@@ -654,33 +655,45 @@ def plot_class_distributions(out_dir, class_avgs):
     plt.savefig(out_dir / "class_avg_dists.png")
 
 
-def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", bins=20):
+def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=None):
     # find each non-ground-truth class avg's best score against ground truth
 
     # select GT-vs-all scores
-    gt_slice = get_pckr_idx_range(gt_name, class_avgs, None)
-    scores = np.flip(max_scores)[slice(*gt_slice), :]
+    gt_start, gt_end = get_pckr_idx_range(gt_name, class_avgs, num_avgs)
+    like_heatmap = np.flip(max_scores)
+    l = like_heatmap.shape[0]
 
-    # nan out scores for GT-vs-GT
-    scores[:, slice(*gt_slice)] = np.nan
+    mask = np.ones_like(like_heatmap, dtype=bool)  # make all-True mask
+    mask[l - gt_end : l - gt_start, :] = False  # make GT-vs-all scores False
+    mask[:, l - gt_end : l - gt_start] = True  # make GT-vs-GT scores True again
+
+    # apply mask to scores
+    like_heatmap[mask] = np.nan
 
     # get max score for each class avg against GT
     # ignore RuntimeWarning
     with warnings.catch_warnings():
+        # nanmax throws RuntimeWarning if all scores are nan
         warnings.simplefilter("ignore")
         try:
-            maxes = np.nanmax(scores, axis=0)
+            # find max with ground truth for each class average (down columns)
+            maxes = np.nanmax(like_heatmap, axis=0)
         except ValueError:
             log("internal error (scores array empty) - skipping max score histogram")
             return
 
     # plot histogram
-    hist_fig, hist_ax = plt.subplots(figsize=(5, 3), dpi=200)
+    hist_fig, hist_ax = plt.subplots(figsize=(10, 6), dpi=200)
 
-    for i, pckr_name in enumerate(class_avgs.keys()):
-        pckr_slice = get_pckr_idx_range(pckr_name, class_avgs, None)
+    # reverse class_avgs OrderedDict since we plot in reverse order
+    class_avgs_rev = OrderedDict(reversed(list(class_avgs.items())))
+
+    for i, pckr_name in enumerate(class_avgs_rev.keys()):
+        pckr_slice = get_pckr_idx_range(pckr_name, class_avgs, num_avgs)
         try:
-            y, edges = np.histogram(maxes[slice(*pckr_slice)], bins=bins)
+            slice_start, slice_end = pckr_slice
+            inv_pckr_slice = slice(l - slice_end, l - slice_start)
+            y, edges = np.histogram(maxes[inv_pckr_slice], bins=20)
         except ValueError:
             continue  # skip all-nan slices
         centers = 0.5 * (edges[1:] + edges[:-1])
@@ -798,13 +811,13 @@ if __name__ == "__main__":
         for n, arr in corr_arrs.items():
             np.save(a.out_dir / f"corr_{n}.npy", arr)
 
-    # log("plotting correlation previews")
+    log("plotting correlation previews")
     plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
 
-    # log("plotting heatmap")
+    log("plotting heatmap")
     plot_heatmap(a.out_dir, all_imgs, class_avgs, a.n, corr_arrs["max_scores"])
 
-    # log("plotting class average distributions")
+    log("plotting class average distributions")
     plot_class_distributions(a.out_dir, class_avgs)
 
     log("plotting correlation max score histogram")
