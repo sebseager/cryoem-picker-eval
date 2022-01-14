@@ -112,7 +112,7 @@ Falcon_2012_06_12-14_57_34_0    3810	3402
 ...
 ```
  
- Topaz also supports conversion from other file formats using its `topaz convert` utility. We also provide a conversion utility at `tools/coord_converter.py` that may be helpful.
+ Topaz also supports conversion from other file formats using its `topaz convert` utility. We also provide a conversion utility at `scripts/coord_converter.py` that may be helpful.
  
  Before training can proceed, the training coordinate files must be downscaled by the same factor used to downscale the micrographs. Assuming a downscaling factor of 6, and that your training data are available in `demo_data/train_mrc/` and `demo_data/train_coord/`:
  
@@ -154,4 +154,4 @@ Topaz provides a utility to convert the format of the `extract` output file, whi
 topaz convert -o demo_data/topaz_out/predicted_particles_all_upsampled.star demo_data/topaz_out/predicted_particles_all_upsampled.txt
 ```
 
-We also provide a script at `tools/coord_converter.py` that may be useful for coordinate file conversion.
+We also provide a script at `scripts/coord_converter.py` that may be useful for coordinate file conversion.
