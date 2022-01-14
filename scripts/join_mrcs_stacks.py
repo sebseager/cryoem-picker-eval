@@ -57,6 +57,6 @@ if __name__ == "__main__":
             for z in range(new_shp[0]):
                 f.data[z, :, :] = joined_mrc[z, :, :]
     except AttributeError:
-        log("failed to open one or more mrcs files", 2)
+        log("failed to open one or more mrcs files", lvl=2)
 
-    log("done")
+    log("done.")

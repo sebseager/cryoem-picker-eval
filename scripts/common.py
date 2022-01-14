@@ -1,7 +1,7 @@
 import sys
 
 
-def log(msg, lvl=0, quiet=False):
+def log(*msgs, lvl=0, quiet=False):
     """Format and print message to console with one of the following logging levels:
     0: info (print and continue execution; ignore if quiet=True)
     1: warning (print and continue execution)
@@ -13,13 +13,13 @@ def log(msg, lvl=0, quiet=False):
 
     prefix = ""
     if lvl == 0:
-        prefix = "INFO: "
+        prefix = "INFO:"
     elif lvl == 1:
-        prefix = "WARN: "
+        prefix = "WARN:"
     elif lvl == 2:
-        prefix = "CRITICAL: "
+        prefix = "CRITICAL:"
 
-    print(f"{prefix}{msg}")
+    print(f"{prefix}", *msgs)
     if lvl == 2:
         sys.exit(1)
 
