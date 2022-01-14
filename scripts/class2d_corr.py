@@ -190,13 +190,22 @@ def find_largest_square_fast(arr):
     # assumes rows/columns present of only mask create col/row zero counts
     col_sum, row_sum = np.sum(mask, axis=0), np.sum(mask, axis=1)
 
-    # determine minimum col/row
-    col_shift = np.argmin(col_sum)
-
     # determine shift to center
-    col_shift = 0 if not col_sum[col_shift + 1] == 0 else w - (col_shift + 1)
+    col_shift = np.argmin(col_sum)
+    if col_shift + 1 < len(col_sum) and col_sum[col_shift + 1] != 0:
+        col_shift = 0
+    else:
+        col_shift = w - (col_shift + 1)
+
     row_shift = np.argmin(row_sum)
-    row_shift = 0 if not row_sum[row_shift + 1] == 0 else h - (row_shift + 1)
+    if row_shift + 1 < len(row_sum) and row_sum[row_shift + 1] != 0:
+        row_shift = 0
+    else:
+        row_shift = h - (row_shift + 1)
+
+    # ORIG: WE SHOULD CHECK FOR OUT OF BOUNDS
+    # col_shift = 0 if not col_sum[col_shift + 1] == 0 else w - (col_shift + 1)
+    # row_shift = 0 if not row_sum[row_shift + 1] == 0 else h - (row_shift + 1)
 
     # shift class and mask images
     img_shift = np.roll(img, shift=row_shift, axis=0)
@@ -508,7 +517,7 @@ def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
     plt.savefig(out_dir / "corr_previews.png", bbox_extra_artists=extra_artists)
 
 
-def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
+def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores, clip_to=(0, 1)):
     num_imgs = len(all_imgs)
 
     # create figure
@@ -600,6 +609,9 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores):
     _format_axes(ax_heatmap)
     _format_axes(ax_colorbar)
 
+    # any correlations < 0 are set to 0, any correlations > 1 are set to 1
+    max_scores = np.clip(max_scores, clip_to[0], clip_to[1])
+
     # heatmap mask
     mask = np.ones_like(max_scores, dtype=bool)
     mask[np.tril_indices_from(mask)] = False
@@ -655,8 +667,13 @@ def plot_class_distributions(out_dir, class_avgs):
     plt.savefig(out_dir / "class_avg_dists.png")
 
 
-def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=None):
+def plot_max_score_hist(
+    out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=None, clip_to=(0, 1)
+):
     # find each non-ground-truth class avg's best score against ground truth
+
+    # any correlations < 0 are set to 0, any correlations > 1 are set to 1
+    max_scores = np.clip(max_scores, clip_to[0], clip_to[1])
 
     # select GT-vs-all scores
     gt_start, gt_end = get_pckr_idx_range(gt_name, class_avgs, num_avgs)
@@ -693,7 +710,7 @@ def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=
         try:
             slice_start, slice_end = pckr_slice
             inv_pckr_slice = slice(l - slice_end, l - slice_start)
-            y, edges = np.histogram(maxes[inv_pckr_slice], bins=20)
+            y, edges = np.histogram(maxes[inv_pckr_slice], bins=40)
         except ValueError:
             continue  # skip all-nan slices
         centers = 0.5 * (edges[1:] + edges[:-1])
@@ -755,6 +772,14 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
+        "--score_clip",
+        help="Specify two decimal values between which to clip correlation scores "
+        "(default is '0 1')",
+        nargs=2,
+        default=(0, 1),
+        type=float,
+    )
+    parser.add_argument(
         "--force",
         help="Overwrite (recalculate) any temporary data files in output directory",
         action="store_true",
@@ -767,6 +792,8 @@ if __name__ == "__main__":
         log("Number of class average files and STAR files must match", lvl=2)
     if len(a.m) < 2:
         log("Must have at least two class average files to run correlation", lvl=2)
+
+    a.score_clip = tuple(a.score_clip)
 
     # normalize paths
     a.m = [Path(p).resolve() for p in np.atleast_1d(a.m)]
@@ -788,9 +815,7 @@ if __name__ == "__main__":
     log(f"*.mrcs shapes", [x["mrcs"].shape for x in class_avgs.values()])
 
     corr_arrs = load_np_files(a.out_dir, do_recalc_all=a.force)
-
     all_imgs = [avg for v in class_avgs.values() for avg in v["mrcs"][: a.n]]
-
     do_recalc = any(v is None for v in corr_arrs.values())
 
     if do_recalc:
@@ -815,12 +840,26 @@ if __name__ == "__main__":
     plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
 
     log("plotting heatmap")
-    plot_heatmap(a.out_dir, all_imgs, class_avgs, a.n, corr_arrs["max_scores"])
+    plot_heatmap(
+        a.out_dir,
+        all_imgs,
+        class_avgs,
+        a.n,
+        corr_arrs["max_scores"],
+        clip_to=a.score_clip,
+    )
 
     log("plotting class average distributions")
     plot_class_distributions(a.out_dir, class_avgs)
 
     log("plotting correlation max score histogram")
-    plot_max_score_hist(a.out_dir, corr_arrs["max_scores"], class_avgs, a.gt_name, a.n)
+    plot_max_score_hist(
+        a.out_dir,
+        corr_arrs["max_scores"],
+        class_avgs,
+        a.gt_name,
+        a.n,
+        clip_to=a.score_clip,
+    )
 
     log("done.")
