@@ -683,7 +683,7 @@ def plot_heatmap(
     plt.savefig(out_dir / "heatmap.png", bbox_extra_artists=extra_artists)
 
 
-def plot_class_distributions(out_dir, class_avgs):
+def plot_class_distributions(out_dir, class_avgs, specify_classes=None):
     n_cols = len(class_avgs)
     dist_fig = plt.figure(figsize=(5.35 * n_cols, 3), dpi=800)
     dist_grid = gs.GridSpec(ncols=n_cols, nrows=1)
@@ -695,11 +695,25 @@ def plot_class_distributions(out_dir, class_avgs):
     for i, class_dict in enumerate(class_avgs.values()):
         if "sorted_distr" not in class_dict:
             continue
+
+        pckr_name = class_dict["name"]
+
+        # filter any classes not in specify_classes
+        if specify_classes is not None and pckr_name in specify_classes:
+            class_dict["sorted_distr"] = [
+                class_dict["sorted_distr"][i] for i in specify_classes[pckr_name]
+            ]
+
         ax = dist_fig.add_subplot(dist_grid[0, i])
         xs = list(range(1, len(class_dict["sorted_distr"]) + 1))
+
+        # if we filtered any classes, set x axis labels accordingly
+        if specify_classes is not None and pckr_name in specify_classes:
+            xs = specify_classes[pckr_name]
+
         ys = class_dict["sorted_distr"]
         ax.bar(x=xs, height=ys, color="gray")
-        ax.set_title(class_dict["name"])
+        ax.set_title(pckr_name)
         ax.set_xticks(xs)
 
     plt.savefig(out_dir / "class_avg_dists.png")
@@ -879,6 +893,11 @@ if __name__ == "__main__":
         for n, arr in corr_arrs.items():
             np.save(a.out_dir / f"corr_{n}.npy", arr)
 
+    # DEBUG: limit heatmap and distribution to only these classes
+    # set to None to disable
+    SPECIFY_CLASSES = None
+    SPECIFY_CLASSES = {"GT": [0, 1, 2, 3], "APPLEpicker": [1, 3, 4, 5]}
+
     log("plotting correlation previews")
     plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
 
@@ -891,11 +910,11 @@ if __name__ == "__main__":
         corr_arrs["max_scores"],
         use_ax_nums=not a.hm_nums_off,
         clip_to=a.score_clip,
-        specify_classes={"GT": [0, 1, 2, 3], "APPLEpicker": [1, 3, 4, 5]},
+        specify_classes=SPECIFY_CLASSES,
     )
 
     log("plotting class average distributions")
-    plot_class_distributions(a.out_dir, class_avgs)
+    plot_class_distributions(a.out_dir, class_avgs, specify_classes=SPECIFY_CLASSES)
 
     log("plotting correlation max score histogram")
     plot_max_score_hist(
