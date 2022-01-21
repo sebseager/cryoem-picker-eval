@@ -57,7 +57,7 @@ def read_mrc(path, mmap=False):
             with mrcfile.open(path, mode="r", permissive=True) as f:
                 mrc = f.data
 
-    return mrc
+    return mrc.astype(np.float32)
 
 
 def read_class_avgs(mrcs_paths, star_paths):
@@ -174,9 +174,10 @@ def find_largest_square(arr):
 
 
 def find_largest_square_fast(arr):
-    # NOTE: does not work on already-rotated arrays
-    #       since this may make mask not circular anymore
-    #       (will fall back to slower algo in this case)
+    """Shifts particle to center of image and extracts largest square.
+    This doesn't work on already-rotated arrays, since this may make mask not circular
+    (will fall back to slower algo in this case).
+    """
 
     # copy arr and account for floating point error
     img = arr.copy()
@@ -248,7 +249,63 @@ def find_largest_square_fast(arr):
     return i, j, l
 
 
-def inscribed_square_from_mask(class_mrc, angle_deg=0, func=find_largest_square_fast):
+def find_largest_square_fast2(img):
+    """Shifts particle to center of image and extracts largest square.
+    Better version of find_largest_sqaure_fast, debugged by CJC.
+    This doesn't work on already-rotated arrays, since this may make mask not circular
+    (will fall back to slower algo in this case).
+    """
+
+    # 	create mask
+    mask = np.ones_like(img)
+    mask[np.abs(img) < np.finfo(float).eps] = 0
+
+    # determine shift if needed
+    col_sum = np.sum(mask, axis=0)
+    row_sum = np.sum(mask, axis=1)
+
+    # check for circular mask
+    if np.max(col_sum) != np.max(row_sum):
+        # if image contains no mask, assume mask is the inscribed circle
+        if 0 not in col_sum or 0 not in row_sum:
+            h, w = [val // 2 for val in mask.shape]
+            l = (np.floor(np.min(mask.shape) / sqrt_2).astype(np.int16)) // 2
+            return w - l, h - l, l * 2
+        else:
+            log("noncircular or invalid mask - falling back to slower method", lvl=1)
+            return find_largest_square(img)
+
+    mask_size = np.max(col_sum)
+
+    # 	find center of current mask
+    col_shift = np.rint(np.median(np.where(col_sum == np.amax(col_sum)))).astype(
+        np.int32
+    )
+    row_shift = np.rint(np.median(np.where(row_sum == np.amax(row_sum)))).astype(
+        np.int32
+    )
+
+    # 	calculate difference from image center
+    h, w = [val // 2 for val in mask.shape]
+    col_shift = w - col_shift
+    row_shift = h - row_shift
+
+    # 	shift particle and mask to center of image
+    img_shift = np.roll(img, shift=row_shift, axis=0)
+    img_shift = np.roll(img_shift, shift=col_shift, axis=1)
+    mask_shift = np.roll(mask, shift=row_shift, axis=0)
+    mask_shift = np.roll(mask_shift, shift=col_shift, axis=1)
+
+    # 	use pythagorean theorem to get half the length of largest box inside mask
+    l = (np.floor(mask_size / sqrt_2).astype(np.int16)) // 2
+    # img_box = img_shift[h - l : h + l, w - l : w + l]
+    # mask_box = mask_shift[h - l : h + l, w - l : w + l]
+
+    # return top left row, top left col, and square side length
+    return w - l, h - l, l * 2
+
+
+def inscribed_square_from_mask(class_mrc, angle_deg=0, func=find_largest_square_fast2):
     # for find_largest_square_fast, do cropping first THEN rotation
     # if you want to rotate first (losing fewer pixels), use find_largest_square
     mrc = class_mrc.copy()
@@ -300,12 +357,12 @@ def build_corrs(all_imgs, angle_step, do_noise_zeros=False):
             corrs = []
             for theta in angles:
                 img_x_scaled = standardize_arr(inscribed_square_from_mask(img_x, theta))
-                corr = fftconvolve(img_x_scaled, img_y_conj, mode="full")
+                corr = fftconvolve(img_x_scaled, img_y_conj, mode="same")
 
                 # https://github.com/Sabrewarrior/normxcorr2-python/blob/master/normxcorr2.py
                 tmp = fftconvolve(
-                    np.square(img_x_scaled), img_y_ones, mode="full"
-                ) - np.square(fftconvolve(img_x_scaled, img_y_ones, mode="full")) / (
+                    np.square(img_x_scaled), img_y_ones, mode="same"
+                ) - np.square(fftconvolve(img_x_scaled, img_y_ones, mode="same")) / (
                     np.prod(img_y_scaled.shape)
                 )
 
@@ -463,6 +520,7 @@ def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
 
         # place preview images
         for j, y in enumerate([None] + list(range(*imgs_y_slice))):
+            j_inscribed_square = inscribed_square_from_mask(imgs_y[j - 1])
             for k, x in enumerate([None] + list(range(*imgs_x_slice))):
 
                 try:
@@ -476,9 +534,7 @@ def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
                             inscribed_square_from_mask(imgs_x[k - 1]), cmap=plt.cm.gray
                         )
                     elif x is None and y is not None:
-                        ax_top.imshow(
-                            inscribed_square_from_mask(imgs_y[j - 1]), cmap=plt.cm.gray
-                        )
+                        ax_top.imshow(j_inscribed_square, cmap=plt.cm.gray)
 
                     # format cells
                     elif x is not None and y is not None:
@@ -525,15 +581,14 @@ def plot_heatmap(
     num_avgs,
     max_scores,
     use_ax_nums=True,
-    clip_to=(0, 1),
+    clip_to=None,
     specify_classes=None,
 ):
     """
     Plot heatmap of correlation scores. Set use_ax_nums to False to skip plotting
     class indices on the axes (use for large heatmaps). Use clip_to to manually
-    set the min and max of the colorbar (default is 0-1). Set specify_classes to
-    a dict of the form {"picker_name": [class_indices]} to plot only the specified
-    classes for each picker.
+    set the min and max of the colorbar. Set specify_classes to a dict of the form
+    {"picker_name": [class_indices]} to plot only the specified classes for each picker.
     """
 
     num_imgs = len(all_imgs)
@@ -577,6 +632,7 @@ def plot_heatmap(
         # plot images in reverse order
         img_i = num_imgs - i - 1
         img = all_imgs[img_i].copy()
+        inscribed_square = inscribed_square_from_mask(img)
 
         # plot class avg images on both axes
         for j, ax in enumerate(
@@ -585,7 +641,7 @@ def plot_heatmap(
                 corr_fig.add_subplot(corr_inner_top[i, 0]),
             )
         ):
-            ax.imshow(inscribed_square_from_mask(img), cmap=plt.cm.gray)
+            ax.imshow(inscribed_square, cmap=plt.cm.gray)
 
             corr_fig.add_subplot(ax)
             _format_axes(ax)
@@ -633,7 +689,8 @@ def plot_heatmap(
     _format_axes(ax_colorbar)
 
     # any correlations < 0 are set to 0, any correlations > 1 are set to 1
-    max_scores = np.clip(max_scores, clip_to[0], clip_to[1])
+    if clip_to is not None:
+        max_scores = np.clip(max_scores, clip_to[0], clip_to[1])
 
     # remove any rows/cols not included in specify_classes
     if specify_classes is not None:
@@ -657,15 +714,15 @@ def plot_heatmap(
     # heatmap proper
     # np.flip flips both axes by default
     to_plot = np.flip(max_scores)
-    lo = math.floor(max_scores.min() * 10) / 10
-    hi = math.ceil(max_scores.max() * 10) / 10
+    lo = math.ceil(max_scores.min() * 10) / 10
+    hi = math.floor(max_scores.max() * 10) / 10
     cmap = plt.get_cmap("coolwarm").copy()
     heatmap = sns.heatmap(
         to_plot,
         mask=mask,
         cmap=cmap,
-        vmin=lo,
-        vmax=hi,
+        # vmin=lo,
+        # vmax=hi,
         linewidths=0.35,
         ax=ax_heatmap,
         cbar_ax=ax_colorbar,
@@ -720,12 +777,13 @@ def plot_class_distributions(out_dir, class_avgs, specify_classes=None):
 
 
 def plot_max_score_hist(
-    out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=None, clip_to=(0, 1)
+    out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=None, clip_to=None
 ):
     # find each non-ground-truth class avg's best score against ground truth
 
     # any correlations < 0 are set to 0, any correlations > 1 are set to 1
-    max_scores = np.clip(max_scores, clip_to[0], clip_to[1])
+    if clip_to is not None:
+        max_scores = np.clip(max_scores, clip_to[0], clip_to[1])
 
     # select GT-vs-all scores
     gt_start, gt_end = get_pckr_idx_range(gt_name, class_avgs, num_avgs)
@@ -826,9 +884,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--score_clip",
         help="Specify two decimal values between which to clip correlation scores "
-        "(default is '0 1')",
+        "(default is no clipping)",
         nargs=2,
-        default=(0, 1),
+        default=None,
         type=float,
     )
     parser.add_argument(
@@ -849,8 +907,6 @@ if __name__ == "__main__":
         log("Number of class average files and STAR files must match", lvl=2)
     if len(a.m) < 2:
         log("Must have at least two class average files to run correlation", lvl=2)
-
-    a.score_clip = tuple(a.score_clip)
 
     # normalize paths
     a.m = [Path(p).resolve() for p in np.atleast_1d(a.m)]
@@ -896,10 +952,7 @@ if __name__ == "__main__":
     # DEBUG: limit heatmap and distribution to only these classes
     # set to None to disable
     SPECIFY_CLASSES = None
-    SPECIFY_CLASSES = {"GT": [0, 1, 2, 3], "APPLEpicker": [1, 3, 4, 5]}
-
-    log("plotting correlation previews")
-    plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
+    # SPECIFY_CLASSES = {"GT": [0, 1, 2, 3], "APPLEpicker": [1, 3, 4, 5]}
 
     log("plotting heatmap")
     plot_heatmap(
@@ -915,6 +968,9 @@ if __name__ == "__main__":
 
     log("plotting class average distributions")
     plot_class_distributions(a.out_dir, class_avgs, specify_classes=SPECIFY_CLASSES)
+
+    log("plotting correlation previews")
+    plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
 
     log("plotting correlation max score histogram")
     plot_max_score_hist(
