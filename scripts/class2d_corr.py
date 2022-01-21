@@ -709,7 +709,7 @@ def plot_class_distributions(out_dir, class_avgs, specify_classes=None):
 
         # if we filtered any classes, set x axis labels accordingly
         if specify_classes is not None and pckr_name in specify_classes:
-            xs = specify_classes[pckr_name]
+            ax.set_xticklabels(str(x + 1) for x in specify_classes[pckr_name])
 
         ys = class_dict["sorted_distr"]
         ax.bar(x=xs, height=ys, color="gray")
