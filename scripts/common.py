@@ -52,7 +52,7 @@ def style_ax(ax, xlab="", ylab="", aspect="auto", xlim=None, ylim=None):
         ax.tick_params(
             axis="y",
             which="both",
-            left=False,
+            left=True,
             right=False,
             direction="out",
             length=4.0,

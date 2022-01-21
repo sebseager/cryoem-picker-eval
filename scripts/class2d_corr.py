@@ -174,8 +174,9 @@ def find_largest_square(arr):
 
 
 def find_largest_square_fast(arr):
-    # NOTE: DOES NOT WORK ON ALREADY-ROTATED ARRAYS
-    # (WILL FALL BACK TO SLOWER find_largest_square)
+    # NOTE: does not work on already-rotated arrays
+    #       since this may make mask not circular anymore
+    #       (will fall back to slower algo in this case)
 
     # copy arr and account for floating point error
     img = arr.copy()
@@ -395,7 +396,7 @@ def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
     ]
 
     # create figure
-    corr_fig = plt.figure(figsize=(5.35 * len(class_name_combos), 5), dpi=500)
+    corr_fig = plt.figure(figsize=(5.35 * len(class_name_combos), 5), dpi=600)
     corr_outer_grid = gs.GridSpec(ncols=len(class_name_combos), nrows=1)
     extra_artists = []
 
@@ -517,11 +518,28 @@ def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
     plt.savefig(out_dir / "corr_previews.png", bbox_extra_artists=extra_artists)
 
 
-def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores, clip_to=(0, 1)):
+def plot_heatmap(
+    out_dir,
+    all_imgs,
+    class_avgs,
+    num_avgs,
+    max_scores,
+    use_ax_nums=True,
+    clip_to=(0, 1),
+    specify_classes=None,
+):
+    """
+    Plot heatmap of correlation scores. Set use_ax_nums to False to skip plotting
+    class indices on the axes (use for large heatmaps). Use clip_to to manually
+    set the min and max of the colorbar (default is 0-1). Set specify_classes to
+    a dict of the form {"picker_name": [class_indices]} to plot only the specified
+    classes for each picker.
+    """
+
     num_imgs = len(all_imgs)
 
     # create figure
-    corr_fig = plt.figure(figsize=(10, 10), dpi=300)
+    corr_fig = plt.figure(figsize=(10, 10), dpi=800)
     corr_outer_grid = gs.GridSpec(ncols=1, nrows=1)
     extra_artists = []
 
@@ -552,6 +570,10 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores, clip_to=(0
         # class image label
         class_label_num = this_pckr_num_avgs - (i - this_pckr_start_idx)
 
+        if specify_classes is not None and this_pckr_name in specify_classes:
+            if class_label_num - 1 not in specify_classes[this_pckr_name]:
+                continue
+
         # plot images in reverse order
         img_i = num_imgs - i - 1
         img = all_imgs[img_i].copy()
@@ -574,17 +596,18 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores, clip_to=(0
             # coords are (x, y)
 
             # class number
-            ax.annotate(
-                class_label_num,
-                xy=(0, 0),
-                xycoords="axes fraction",
-                xytext=(6, -6) if j == 0 else (-8, 6),
-                textcoords="offset points",
-                ha="center",
-                va="center",
-                rotation=rot,
-                fontsize=6,
-            )
+            if use_ax_nums:
+                ax.annotate(
+                    class_label_num,
+                    xy=(0, 0),
+                    xycoords="axes fraction",
+                    xytext=(6, -6) if j == 0 else (-8, 6),
+                    textcoords="offset points",
+                    ha="center",
+                    va="center",
+                    rotation=rot,
+                    fontsize=6,
+                )
 
             # picker name
             if this_pckr_name is not None and class_label_num == 1:
@@ -611,6 +634,21 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores, clip_to=(0
 
     # any correlations < 0 are set to 0, any correlations > 1 are set to 1
     max_scores = np.clip(max_scores, clip_to[0], clip_to[1])
+
+    # remove any rows/cols not included in specify_classes
+    if specify_classes is not None:
+        all_incl_idxs = []
+        for pckr_name, incl_idxs in specify_classes.items():
+            rng = get_pckr_idx_range(pckr_name, class_avgs, num_avgs)
+            all_incl_idxs.extend([rng[0] + i for i in incl_idxs])
+
+        mask = np.ones(max_scores.shape[0], dtype=bool)
+        mask[all_incl_idxs] = False
+        max_scores = np.delete(max_scores, mask, axis=0)
+
+        mask = np.ones(max_scores.shape[1], dtype=bool)
+        mask[all_incl_idxs] = False
+        max_scores = np.delete(max_scores, mask, axis=1)
 
     # heatmap mask
     mask = np.ones_like(max_scores, dtype=bool)
@@ -647,7 +685,7 @@ def plot_heatmap(out_dir, all_imgs, class_avgs, num_avgs, max_scores, clip_to=(0
 
 def plot_class_distributions(out_dir, class_avgs):
     n_cols = len(class_avgs)
-    dist_fig = plt.figure(figsize=(5.35 * n_cols, 3), dpi=200)
+    dist_fig = plt.figure(figsize=(5.35 * n_cols, 3), dpi=800)
     dist_grid = gs.GridSpec(ncols=n_cols, nrows=1)
 
     if all(v["star"] is None for v in class_avgs.values()):
@@ -700,7 +738,7 @@ def plot_max_score_hist(
             return
 
     # plot histogram
-    hist_fig, hist_ax = plt.subplots(figsize=(10, 6), dpi=200)
+    hist_fig, hist_ax = plt.subplots(figsize=(10, 6), dpi=800)
 
     # reverse class_avgs OrderedDict since we plot in reverse order
     class_avgs_rev = OrderedDict(reversed(list(class_avgs.items())))
@@ -780,6 +818,11 @@ if __name__ == "__main__":
         type=float,
     )
     parser.add_argument(
+        "--hm_nums_off",
+        help="Turn of image numbering on heatmap (for large plots)",
+        action="store_true",
+    )
+    parser.add_argument(
         "--force",
         help="Overwrite (recalculate) any temporary data files in output directory",
         action="store_true",
@@ -846,7 +889,9 @@ if __name__ == "__main__":
         class_avgs,
         a.n,
         corr_arrs["max_scores"],
+        use_ax_nums=not a.hm_nums_off,
         clip_to=a.score_clip,
+        specify_classes={"GT": [0, 1, 2, 3], "APPLEpicker": [1, 3, 4, 5]},
     )
 
     log("plotting class average distributions")
