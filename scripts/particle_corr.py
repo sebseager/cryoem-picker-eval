@@ -1,4 +1,3 @@
-import sys
 import os
 import math
 from tqdm import tqdm
@@ -8,21 +7,17 @@ import warnings
 import numpy as np
 import mrcfile
 from collections import OrderedDict
-from itertools import combinations, combinations_with_replacement
+from itertools import combinations_with_replacement
 import pandas as pd
 import random
 from scipy.signal import fftconvolve
 from scipy.ndimage.interpolation import rotate
-from skimage.metrics import structural_similarity
-from sklearn.preprocessing import StandardScaler
 import matplotlib
 
 matplotlib.use("Agg")
 
 from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
-from matplotlib import patches
-from matplotlib import patheffects
 import seaborn as sns
 from coord_converter import star_to_df
 from common import log
