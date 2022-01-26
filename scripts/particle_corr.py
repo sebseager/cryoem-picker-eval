@@ -63,7 +63,7 @@ def read_class_avgs(mrcs_paths, star_paths, n_max_classes=None):
     class_avgs = OrderedDict()
     class_idx = 0
     for m, s in zip(mrcs_paths, star_paths):
-        mrcs = read_mrc(m)
+        mrcs = read_mrc(m, mmap=True)
         n_cls = len(mrcs) if n_max_classes is None else min(n_max_classes, len(mrcs))
         idxs = list(range(class_idx, class_idx + n_cls))
         class_idx = class_idx + n_cls
