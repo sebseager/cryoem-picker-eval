@@ -324,7 +324,7 @@ def build_corrs(
 ):
     angles = np.arange(0, 360, step=angle_step)
 
-    # make all-vs-all lists, capping mrcs lengths at num_avgs
+    # make all-vs-all lists
     num_imgs = len(all_imgs)
 
     # all-vs-all matrices to hold various correlation results
@@ -476,7 +476,7 @@ def get_pckr_name(idx, class_avgs):
     return None
 
 
-def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
+def plot_corr_previews(out_dir, corr_arrs, class_names):
     # get all combinations of two pickers (without matching a picker to itself)
     class_name_combos = [
         x for x in list(combinations_with_replacement(class_names, 2)) if x[0] != x[1]
@@ -594,7 +594,7 @@ def plot_corr_previews(out_dir, corr_arrs, class_names, num_avgs):
                             )
 
                 except IndexError:
-                    # in case of fewer than num_avgs classes
+                    # in case of too few
                     continue
 
                 # add axes
@@ -607,7 +607,6 @@ def plot_heatmap(
     out_dir,
     all_imgs,
     class_avgs,
-    num_avgs,
     max_scores,
     use_ax_nums=True,
     clip_to=None,
@@ -809,9 +808,7 @@ def plot_class_distributions(out_dir, class_avgs, specify_classes=None):
     plt.savefig(out_dir / "class_avg_dists.png")
 
 
-def plot_max_score_hist(
-    out_dir, max_scores, class_avgs, gt_name="GT", num_avgs=None, clip_to=None
-):
+def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", clip_to=None):
     # find each non-ground-truth class avg's best score against ground truth
 
     # any correlations < 0 are set to 0, any correlations > 1 are set to 1
@@ -894,9 +891,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-n",
         help="Number of class averages to use (if available) from each *.mrcs "
-        "file (default is 10)",
+        "file (default is all)",
         type=int,
-        default=10,
+        default=None,
     )
     parser.add_argument(
         "--angle_step",
@@ -968,7 +965,7 @@ if __name__ == "__main__":
     log(f"*.mrcs shapes", [x["mrcs"].shape for x in class_avgs.values()])
 
     corr_arrs = load_np_files(a.out_dir, do_recalc_all=a.force)
-    all_imgs = [avg for v in class_avgs.values() for avg in v["mrcs"][: a.n]]
+    all_imgs = [avg for v in class_avgs.values() for avg in v["mrcs"]]
     do_recalc = any(v is None for v in corr_arrs.values())
 
     if do_recalc:
@@ -1006,7 +1003,6 @@ if __name__ == "__main__":
         a.out_dir,
         all_imgs,
         class_avgs,
-        a.n,
         corr_arrs["max_scores"],
         use_ax_nums=not a.hm_nums_off,
         clip_to=a.score_clip,
@@ -1022,11 +1018,10 @@ if __name__ == "__main__":
         corr_arrs["max_scores"],
         class_avgs,
         a.gt_name,
-        a.n,
         clip_to=a.score_clip,
     )
 
     log("plotting correlation previews")
-    plot_corr_previews(a.out_dir, corr_arrs, class_names, a.n)
+    plot_corr_previews(a.out_dir, corr_arrs, class_names)
 
     log("done.")
