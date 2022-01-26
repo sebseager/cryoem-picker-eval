@@ -954,9 +954,9 @@ if __name__ == "__main__":
     if a.gt_name not in [x.stem for x in a.m]:
         log("ground truth name must match one of the file stems passed in -m", lvl=2)
 
+    log("reading .mrcs files")
     class_avgs = read_class_avgs(a.m, a.s, n_max_classes=a.n)
     class_names = class_avgs.keys()
-
     log(f"*.mrcs shapes", [x["mrcs"].shape for x in class_avgs.values()])
 
     corr_arrs = load_np_files(a.out_dir, do_recalc_all=a.force)
