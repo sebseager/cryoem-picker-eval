@@ -261,12 +261,11 @@ def find_largest_square_fast2(img):
     row_sum = np.sum(mask, axis=1)
 
     # check for circular mask
-    if np.max(col_sum) != np.max(row_sum):
-        # if image contains no mask, assume mask is the inscribed circle
-        if 0 not in col_sum or 0 not in row_sum:
-            h, w = [val // 2 for val in mask.shape]
-            l = (np.floor(np.min(mask.shape) / SQRT_2).astype(np.int16)) // 2
-            return w - l, h - l, l * 2
+    if np.max(col_sum) != np.max(row_sum) or 0 not in col_sum or 0 not in row_sum:
+        # if image contains no valid mask then assume mask is the inscribed circle
+        h, w = [val // 2 for val in mask.shape]
+        l = (np.floor(np.min(mask.shape) / SQRT_2).astype(np.int16)) // 2
+        return w - l, h - l, l * 2
 
     mask_size = np.max(col_sum)
 
