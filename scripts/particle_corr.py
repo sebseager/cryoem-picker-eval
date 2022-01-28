@@ -1,4 +1,5 @@
 import os
+import pdb
 import math
 from tqdm import tqdm
 import argparse
@@ -25,6 +26,18 @@ from consts import *
 
 SQRT_2 = math.sqrt(2)
 FFT_MODE = "same"
+
+# top three dimensions of correlation array are (n_imgs, n_imgs, data)
+# index into the data dimension using the following values
+# (description of the value at each index included below)
+DATA_IDXS = {
+    "angle": 0,  # rotation offset in degrees that gave best correlation
+    "corr_val": 1,  # max fftconvolve correlation value
+    "score": 2,
+    "corr_point": 3,  # (row, col) tuple representing max correlation point
+    "img_shape": 4,  # (row, col) tuple representing size of correlation
+    "corr_data": 5,  # correlation data array (OPTIONAL)
+}
 
 
 def _format_axes(ax):
@@ -94,26 +107,15 @@ def read_class_avgs(mrcs_paths, star_paths, n_max_classes=None):
 
 
 def load_np_files(out_dir, do_recalc_all=False):
-    """
-    Loads numpy arrays in the given output directory.
-    """
-
-    names = ["max_scores", "best_angles", "best_corrs", "global_max_points"]
-    paths = {n: out_dir / f"corr_{n}.npy" for n in names}
-    arrs = {n: None for n in names}
+    """Loads numpy arrays in the given output directory."""
 
     if do_recalc_all:
-        log("recalculating all correlations")
-        return arrs
+        return None
 
-    for n, p in paths.items():
-        try:
-            arrs[n] = np.load(p, allow_pickle=True)
-            log(f"found existing data for: {n}")
-        except FileNotFoundError:
-            pass
-
-    return arrs
+    try:
+        return np.load(out_dir / "corr_data.npy", allow_pickle=True)
+    except FileNotFoundError:
+        return None
 
 
 def fill_below_diag_inplace(arr):
@@ -265,9 +267,6 @@ def find_largest_square_fast2(img):
             h, w = [val // 2 for val in mask.shape]
             l = (np.floor(np.min(mask.shape) / SQRT_2).astype(np.int16)) // 2
             return w - l, h - l, l * 2
-        else:
-            log("noncircular or invalid mask - falling back to slower method", lvl=1)
-            return find_largest_square(img)
 
     mask_size = np.max(col_sum)
 
@@ -316,6 +315,7 @@ def build_corrs(
     do_noise_zeros=False,
     gt_vs_rest=False,
     gt_name="GT",
+    save_full_corrs=False,
 ):
     angles = np.arange(0, 360, step=angle_step)
 
@@ -323,10 +323,7 @@ def build_corrs(
     num_imgs = len(all_imgs)
 
     # all-vs-all matrices to hold various correlation results
-    max_scores = np.full((num_imgs, num_imgs), -1, dtype="float")
-    best_angles = np.full((num_imgs, num_imgs), 0, dtype="float")
-    best_corrs = np.full((num_imgs, num_imgs), None, dtype="object")
-    global_max_points = np.full((num_imgs, num_imgs, 2), -1, dtype="float")
+    corr_data = np.full((num_imgs, num_imgs, len(DATA_IDXS)), np.nan, dtype="object")
 
     # j is rows, k is cols
     for j, img_y in enumerate(tqdm(all_imgs)):
@@ -351,10 +348,6 @@ def build_corrs(
                 if (pckr_name_j == gt_name and pckr_name_k == gt_name) or (
                     gt_name not in (pckr_name_j, pckr_name_k)
                 ):
-                    max_scores[j, k] = np.nan
-                    best_angles[j, k] = np.nan
-                    best_corrs[j, k] = np.full(img_y.shape, np.nan)
-                    global_max_points[j, k] = (img_y.shape[0] // 2, img_y.shape[1] // 2)
                     continue
 
             # seed with coordinates to get reproducible results
@@ -372,7 +365,6 @@ def build_corrs(
                 np.random.seed(None)  # re-seed from /dev/urandom
 
             # build 2d correlations for each angle offset
-            corrs = []
             for theta in angles:
                 img_x_scaled = standardize_arr(inscribed_square_from_mask(img_x, theta))
                 corr = fftconvolve(img_x_scaled, img_y_conj, mode=FFT_MODE)
@@ -391,77 +383,30 @@ def build_corrs(
 
                 # remove any divisions by 0 or very close to 0
                 corr[np.where(np.logical_not(np.isfinite(corr)))] = 0
-                corrs.append(corr)
 
-            # scoring
-            scores = []
-            max_points = []
-            for corr in corrs:
-                # subtract to get index
+                # find correlation max
                 center_xy = np.subtract(np.divide(corr.shape, 2.0), (1, 1))
-                max_corr = np.max(corr)
-                max_xys = list(zip(*np.where(corr == max_corr)))
-                if len(max_xys) > 1:
-                    log("found multiple maxima - keeping first")
+                max_val = np.max(corr)
                 brightest_spot = np.unravel_index(np.argmax(corr), corr.shape)
-                max_points.append(brightest_spot)
                 dist = np.linalg.norm(brightest_spot - center_xy)
 
                 # score formula
                 h, w = corr.shape[0], corr.shape[1]
                 diag_radius = math.sqrt(w ** 2 + h ** 2) / 2
-                score = max_corr - dist / diag_radius
-                scores.append(score)
+                score = max_val - dist / diag_radius
 
-            try:
-                scores = [np.nan if s is None else s for s in scores]
-                score = np.nanmax(scores)
-                i_score = scores.index(score)
+                # compare score and save everything if better
+                best_score = corr_data[j, k, DATA_IDXS["score"]]
+                if np.isnan(best_score) or score > best_score:
+                    corr_data[j, k, DATA_IDXS["angle"]] = theta
+                    corr_data[j, k, DATA_IDXS["corr_val"]] = max_val
+                    corr_data[j, k, DATA_IDXS["score"]] = score
+                    corr_data[j, k, DATA_IDXS["corr_point"]] = brightest_spot
+                    corr_data[j, k, DATA_IDXS["img_shape"]] = (h, w)
+                    if save_full_corrs:
+                        corr_data[j, k, DATA_IDXS["corr_data"]] = corr
 
-                max_scores[j, k] = score
-                best_angles[j, k] = angles[i_score]
-                best_corrs[j, k] = corrs[i_score]
-                global_max_points[j, k] = max_points[i_score]
-
-            except (NameError, IndexError) as e:
-                log("couldn't assign max corr. score\n" + str(e), lvl=1)
-
-    return max_scores, best_angles, best_corrs, global_max_points
-
-
-# def id_pckr_by_idx(idx, class_avgs, num_max_avgs=None):
-#     """Given an index into all_imgs and class average data, return
-#     the picker name, number of averages, and start index. We want to figure
-#     out where each picker starts in all_imgs.
-#     """
-
-#     tmp_i = 0
-#     for pckr_name, pckr in class_avgs.items():
-#         n = len(pckr["mrcs"])
-#         if num_max_avgs is not None and n > num_max_avgs:
-#             n = num_max_avgs
-#         if tmp_i + n > idx:
-#             return (pckr_name, n, tmp_i)
-#         tmp_i += n
-
-#     log("couldn't find picker for idx %s" % idx, lvl=1)
-
-
-# def get_pckr_idx_range(name, class_avgs, num_max_avgs=None):
-#     """Given a picker name and class average data, return the
-#     start and end indices of the picker in all_imgs.
-#     """
-
-#     tmp_i = 0
-#     for pckr_name, pckr in class_avgs.items():
-#         n = len(pckr["mrcs"])
-#         if num_max_avgs is not None and n > num_max_avgs:
-#             n = num_max_avgs
-#         if pckr_name == name:
-#             return (tmp_i, tmp_i + n)
-#         tmp_i += n
-
-#     log("picker %s not found in class averages" % name, lvl=2)
+    return corr_data
 
 
 def get_pckr_name(idx, class_avgs):
@@ -471,7 +416,7 @@ def get_pckr_name(idx, class_avgs):
     return None
 
 
-def plot_corr_previews(out_dir, corr_arrs, class_names):
+def plot_corr_previews(out_dir, corr_data, class_names):
     # get all combinations of two pickers (without matching a picker to itself)
     class_name_combos = [
         x for x in list(combinations_with_replacement(class_names, 2)) if x[0] != x[1]
@@ -563,33 +508,42 @@ def plot_corr_previews(out_dir, corr_arrs, class_names):
                     # format cells
                     elif x is not None and y is not None:
                         corr, score, theta = (
-                            corr_arrs["best_corrs"][y, x],
-                            corr_arrs["max_scores"][y, x],
-                            corr_arrs["best_angles"][y, x],
+                            corr_data[y, x, DATA_IDXS["corr_data"]],
+                            corr_data[y, x, DATA_IDXS["score"]],
+                            corr_data[y, x, DATA_IDXS["angle"]],
                         )
 
-                        if corr is not None:
+                        if not np.all(np.isnan(corr)):
                             ax_top.imshow(corr, cmap=plt.cm.gray)
 
-                            # plot circles around brightest spot
+                        # plot circles around brightest spot
+                        try:
+                            h, w = corr_data[y, x, DATA_IDXS["img_shape"]]
+                            ax_top.set_xlim(0, w)
+                            ax_top.set_ylim(0, h)
+
                             ax_top.scatter(
-                                *zip(corr_arrs["global_max_points"][y, x][::-1]),
+                                *zip(corr_data[y, x, DATA_IDXS["corr_point"]][::-1]),
                                 s=18,
                                 facecolors="None",
                                 edgecolors="r",
                                 linewidths=0.6,
                             )
                             ax_top.scatter(
-                                corr.shape[0] / 2 - 1,
-                                corr.shape[1] / 2 - 1,
+                                w // 2,
+                                h // 2,
                                 s=18,
                                 facecolors="None",
                                 edgecolors="g",
                                 linewidths=0.6,
                             )
+                        except TypeError:
+                            # errors if we try to unpack np.nan into h, w
+                            # (i.e., means no point was saved for this x, y)
+                            pass
 
                 except IndexError:
-                    # in case of too few
+                    # in case of too few images available
                     continue
 
                 # add axes
@@ -846,7 +800,7 @@ def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", clip_to=N
         slice_end = class_avgs[pckr_name]["idxs"][-1] + 1
         try:
             inv_pckr_slice = slice(l - slice_end, l - slice_start)
-            y, edges = np.histogram(maxes[inv_pckr_slice], bins=40)
+            y, edges = np.histogram(maxes[inv_pckr_slice], bins=80)
         except ValueError:
             continue  # skip all-nan slices
         centers = 0.5 * (edges[1:] + edges[:-1])
@@ -926,6 +880,11 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
+        "--save_full_corrs",
+        help="Save full correlation arrays for plotting (uses more disk and memory).",
+        action="store_true",
+    )
+    parser.add_argument(
         "--force",
         help="Overwrite (recalculate) any temporary data files in output directory",
         action="store_true",
@@ -954,51 +913,47 @@ if __name__ == "__main__":
     if a.gt_name not in [x.stem for x in a.m]:
         log("ground truth name must match one of the file stems passed in -m", lvl=2)
 
-    log("reading .mrcs files")
+    log("reading mrcs files")
     class_avgs = read_class_avgs(a.m, a.s, n_max_classes=a.n)
     class_names = class_avgs.keys()
-    log(f"*.mrcs shapes", [x["mrcs"].shape for x in class_avgs.values()])
+    log(f"mrcs shapes", [x["mrcs"].shape for x in class_avgs.values()])
 
-    corr_arrs = load_np_files(a.out_dir, do_recalc_all=a.force)
     all_imgs = [avg for v in class_avgs.values() for avg in v["mrcs"]]
-    do_recalc = any(v is None for v in corr_arrs.values())
+    corr_data = load_np_files(a.out_dir, do_recalc_all=a.force)
 
-    if do_recalc:
+    if corr_data is not None:
+        log("loaded existing data")
+    else:
         log("calculating correlations")
-
-        (
-            corr_arrs["max_scores"],
-            corr_arrs["best_angles"],
-            corr_arrs["best_corrs"],
-            corr_arrs["global_max_points"],
-        ) = build_corrs(
+        corr_data = build_corrs(
             all_imgs,
             a.angle_step,
             class_avgs,
             do_noise_zeros=a.noise,
             gt_vs_rest=a.gt_vs_rest,
             gt_name=a.gt_name,
+            save_full_corrs=a.save_full_corrs,
         )
 
         # fill missing values below main diagonal
-        for arr in corr_arrs.values():
-            fill_below_diag_inplace(arr)
+        fill_below_diag_inplace(corr_data)
 
         # save to disk
-        for n, arr in corr_arrs.items():
-            np.save(a.out_dir / f"corr_{n}.npy", arr)
+        np.save(a.out_dir / "corr_data.npy", corr_data)
 
     # DEBUG: limit heatmap and distribution to only these classes
     # set to None to disable
     SPECIFY_CLASSES = None
     # SPECIFY_CLASSES = {"GT": [0, 1, 2, 3], "APPLEpicker": [1, 3, 4, 5]}
 
+    max_scores = np.array(corr_data[:, :, DATA_IDXS["score"]], dtype=np.float32)
+
     log("plotting heatmap")
     plot_heatmap(
         a.out_dir,
         all_imgs,
         class_avgs,
-        corr_arrs["max_scores"],
+        max_scores,
         use_ax_nums=not a.hm_nums_off,
         clip_to=a.score_clip,
         specify_classes=SPECIFY_CLASSES,
@@ -1010,13 +965,13 @@ if __name__ == "__main__":
     log("plotting correlation max score histogram")
     plot_max_score_hist(
         a.out_dir,
-        corr_arrs["max_scores"],
+        max_scores,
         class_avgs,
         a.gt_name,
         clip_to=a.score_clip,
     )
 
     log("plotting correlation previews")
-    plot_corr_previews(a.out_dir, corr_arrs, class_names)
+    plot_corr_previews(a.out_dir, corr_data, class_names)
 
     log("done.")
