@@ -756,8 +756,19 @@ def plot_class_distributions(out_dir, class_avgs, specify_classes=None):
     plt.savefig(out_dir / "class_avg_dists.png")
 
 
-def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", clip_to=None):
-    # find each non-ground-truth class avg's best score against ground truth
+def plot_max_score_hist(
+    out_dir,
+    max_scores,
+    class_avgs,
+    gt_name="GT",
+    clip_to=None,
+    samp_xval_ranges={},
+    n_samp=10,
+):
+    """Find each non-ground-truth class avg's best score against ground truth.
+    Plot max scores histogram and display n_samp sample particles at each x value
+    in sample_xvals[name].
+    """
 
     # any correlations < 0 are set to 0, any correlations > 1 are set to 1
     if clip_to is not None:
@@ -782,33 +793,82 @@ def plot_max_score_hist(out_dir, max_scores, class_avgs, gt_name="GT", clip_to=N
         # nanmax throws RuntimeWarning if all scores are nan
         warnings.simplefilter("ignore")
         try:
-            # find max with ground truth for each class average (down columns)
+            # find max with any ground truth for each particle (down columns)
             maxes = np.nanmax(like_heatmap, axis=0)
         except ValueError:
-            log("internal error (scores array empty) - skipping max score histogram")
+            log("scores array empty (skipping max score histogram)", lvl=1)
             return
 
     # plot histogram
-    hist_fig, hist_ax = plt.subplots(figsize=(10, 6), dpi=800)
+    hist_fig, hist_ax = plt.subplots(figsize=(12, 8), dpi=800)
 
     # reverse class_avgs OrderedDict since we plot in reverse order
     class_avgs_rev = OrderedDict(reversed(list(class_avgs.items())))
 
-    for i, pckr_name in enumerate(class_avgs_rev.keys()):
+    # keep track of samples for later
+    samples = {k: {} for k in samp_xval_ranges.keys()}
+
+    for i, pckr_name in enumerate(tqdm(class_avgs_rev.keys())):
         slice_start = class_avgs[pckr_name]["idxs"][0]
         slice_end = class_avgs[pckr_name]["idxs"][-1] + 1
         try:
+            # slice needs to be backwards because x axis of the histogram is reversed
             inv_pckr_slice = slice(l - slice_end, l - slice_start)
-            y, edges = np.histogram(maxes[inv_pckr_slice], bins=80)
+            # reverse maxes so it matches order of class_avgs[pckr_name]["idxs"]
+            pckr_maxes = maxes[inv_pckr_slice][::-1]
+            y, edges = np.histogram(pckr_maxes, bins=80)
         except ValueError:
             continue  # skip all-nan slices
         centers = 0.5 * (edges[1:] + edges[:-1])
-        plt.plot(centers, y, color=PICKER_COLORS[i], label=pckr_name)
+        hist_ax.plot(centers, y, color=PICKER_COLORS[i], label=pckr_name)
+
+        # sample particles
+        n_mrcs = len(class_avgs[pckr_name]["mrcs"])
+        if pckr_name in samp_xval_ranges:
+            for x_rng in samp_xval_ranges[pckr_name]:
+                # only take n_samp particles
+                samples[pckr_name][x_rng] = [
+                    {"mrcs": class_avgs[pckr_name]["mrcs"][i], "score": pckr_maxes[i]}
+                    for i in range(n_mrcs)
+                    if pckr_maxes[i] >= x_rng[0] and pckr_maxes[i] <= x_rng[1]
+                ][:n_samp]
 
     hist_ax.set_xlabel("Max Correlation Score")
     hist_ax.set_ylabel("Frequency")
     hist_ax.legend(loc="best", frameon=False)
     plt.savefig(out_dir / "max_score_hist.png", bbox_inches="tight")
+
+    # plot sample grid
+    if not samp_xval_ranges:
+        return
+
+    n_samp_grids = len(samp_xval_ranges.keys())
+    samp_fig = plt.figure(constrained_layout=True, figsize=(12, 8), dpi=600)
+    n_rows = sum(len(v) for v in samp_xval_ranges.values())
+    samp_gs = samp_fig.add_gridspec(nrows=n_rows, ncols=n_samp + 1)
+
+    pckr_offset = 0
+    for pckr_name, v in samples.items():
+        for j, (x_rng, samp_imgs) in enumerate(v.items()):
+            for k, img in enumerate(samp_imgs):
+                ax = samp_fig.add_subplot(samp_gs[pckr_offset + j, k])
+                ax.axis("off")
+                # add label for each row in col 0
+                if k == 0:
+                    ax.text(
+                        0.5,
+                        0.5,
+                        f"{pckr_name}\n{x_rng[0]}-{x_rng[1]}",
+                        va="center",
+                        ha="right",
+                        fontsize=8,
+                    )
+                else:
+                    ax.imshow(img["mrcs"], cmap="gray")
+                    ax.set_title(f"{img['score']:.3f}", fontsize=8)
+        pckr_offset += len(v)
+
+    plt.savefig(out_dir / "score_hist_samples.png", bbox_inches="tight")
 
 
 if __name__ == "__main__":
@@ -947,6 +1007,20 @@ if __name__ == "__main__":
 
     max_scores = np.array(corr_data[:, :, DATA_IDXS["score"]], dtype=np.float32)
 
+    log("plotting correlation max score histogram")
+    plot_max_score_hist(
+        a.out_dir,
+        max_scores,
+        class_avgs,
+        a.gt_name,
+        clip_to=a.score_clip,
+        samp_xval_ranges={
+            k: [(0.02, 0.1), (0.34, 0.36), (0.39, 0.41), (0.44, 0.46)]
+            for k in class_names
+            if k != a.gt_name
+        },
+    )
+
     log("plotting heatmap")
     plot_heatmap(
         a.out_dir,
@@ -960,15 +1034,6 @@ if __name__ == "__main__":
 
     log("plotting class average distributions")
     plot_class_distributions(a.out_dir, class_avgs, specify_classes=SPECIFY_CLASSES)
-
-    log("plotting correlation max score histogram")
-    plot_max_score_hist(
-        a.out_dir,
-        max_scores,
-        class_avgs,
-        a.gt_name,
-        clip_to=a.score_clip,
-    )
 
     log("plotting correlation previews")
     plot_corr_previews(a.out_dir, corr_data, class_names)
