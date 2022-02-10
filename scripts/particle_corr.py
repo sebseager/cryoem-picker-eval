@@ -329,10 +329,8 @@ def build_corrs(
         # figure out what picker is in this row
         pckr_name_j = get_pckr_name(j, class_avgs)
 
-        # normalize img_y
-        img_y_scaled = standardize_arr(inscribed_square_from_mask(img_y))
-        img_y_ones = np.ones(img_y_scaled.shape)
-        img_y_conj = np.flipud(np.fliplr(img_y_scaled)).conj()
+        # we'll set this after we check GT-vs-rest condition below
+        img_y_scaled = img_y_ones = img_y_conj = None
 
         for k, img_x in enumerate(all_imgs):
             # skip if we're below the matrix diagonal
@@ -344,10 +342,16 @@ def build_corrs(
 
             # check GT-vs-rest condition
             if gt_vs_rest:
-                if (pckr_name_j == gt_name and pckr_name_k == gt_name) or (
-                    gt_name not in (pckr_name_j, pckr_name_k)
-                ):
-                    continue
+                if pckr_name_j == gt_name and pckr_name_k == gt_name:
+                    continue  # GT vs GT
+                if gt_name not in (pckr_name_j, pckr_name_k):
+                    continue  # non-GT vs non-GT
+
+            # set up img_y if we haven't already
+            if img_y_scaled is None:
+                img_y_scaled = standardize_arr(inscribed_square_from_mask(img_y))
+                img_y_ones = np.ones(img_y_scaled.shape)
+                img_y_conj = np.flipud(np.fliplr(img_y_scaled)).conj()
 
             # seed with coordinates to get reproducible results
             # replace mask (zeros) with uniform random values between
@@ -391,7 +395,7 @@ def build_corrs(
 
                 # score formula
                 h, w = corr.shape[0], corr.shape[1]
-                diag_radius = math.sqrt(w ** 2 + h ** 2) / 2
+                diag_radius = math.sqrt(w**2 + h**2) / 2
                 score = max_val - dist / diag_radius
 
                 # compare score and save everything if better
@@ -770,14 +774,16 @@ def plot_max_score_hist(
     in sample_xvals[name].
     """
 
+    scores = max_scores.copy()
+
     # any correlations < 0 are set to 0, any correlations > 1 are set to 1
     if clip_to is not None:
-        max_scores = np.clip(max_scores, clip_to[0], clip_to[1])
+        scores = np.clip(scores, clip_to[0], clip_to[1])
 
     # select GT-vs-all scores
     gt_start = class_avgs[gt_name]["idxs"][0]
     gt_end = class_avgs[gt_name]["idxs"][-1] + 1
-    like_heatmap = np.flip(max_scores)
+    like_heatmap = np.flip(scores)
     l = like_heatmap.shape[0]
 
     mask = np.ones_like(like_heatmap, dtype=bool)  # make all-True mask
@@ -793,8 +799,11 @@ def plot_max_score_hist(
         # nanmax throws RuntimeWarning if all scores are nan
         warnings.simplefilter("ignore")
         try:
-            # find max with any ground truth for each particle (down columns)
-            maxes = np.nanmax(like_heatmap, axis=0)
+            # find max with any ground truth for each particle
+            # NOTE: think about the heatmap - maxes is the colmax from right to left
+            #       (rightmost col first in the list, leftmost col last)
+            #       so we reverse it to get it in same order as classes in class_avgs
+            maxes = np.nanmax(like_heatmap, axis=0)[::-1]
         except ValueError:
             log("scores array empty (skipping max score histogram)", lvl=1)
             return
@@ -802,38 +811,36 @@ def plot_max_score_hist(
     # plot histogram
     hist_fig, hist_ax = plt.subplots(figsize=(12, 8), dpi=800)
 
-    # reverse class_avgs OrderedDict since we plot in reverse order
-    class_avgs_rev = OrderedDict(reversed(list(class_avgs.items())))
-
     # keep track of samples for later
     samples = {k: {} for k in samp_xval_ranges.keys()}
 
-    for i, pckr_name in enumerate(tqdm(class_avgs_rev.keys())):
+    for i, pckr_name in enumerate(tqdm(class_avgs.keys())):
         slice_start = class_avgs[pckr_name]["idxs"][0]
         slice_end = class_avgs[pckr_name]["idxs"][-1] + 1
         try:
-            # slice needs to be backwards because x axis of the histogram is reversed
-            inv_pckr_slice = slice(l - slice_end, l - slice_start)
-            # reverse maxes so it matches order of class_avgs[pckr_name]["idxs"]
-            pckr_maxes = maxes[inv_pckr_slice][::-1]
-            y, edges = np.histogram(pckr_maxes, bins=80)
+            y, edges = np.histogram(maxes[slice(slice_start, slice_end)], bins=80)
         except ValueError:
             continue  # skip all-nan slices
         centers = 0.5 * (edges[1:] + edges[:-1])
         hist_ax.plot(centers, y, color=PICKER_COLORS[i], label=pckr_name)
 
         # sample particles
-        n_mrcs = len(class_avgs[pckr_name]["mrcs"])
         if pckr_name in samp_xval_ranges:
             for x_rng in samp_xval_ranges[pckr_name]:
                 # only take n_samp particles
-                samples[pckr_name][x_rng] = [
-                    {"mrcs": class_avgs[pckr_name]["mrcs"][i], "score": pckr_maxes[i]}
-                    for i in range(n_mrcs)
-                    if pckr_maxes[i] >= x_rng[0] and pckr_maxes[i] <= x_rng[1]
-                ][:n_samp]
+                n_particles_added = 0
+                samples[pckr_name][x_rng] = []
+                for i in range(len(class_avgs[pckr_name]["mrcs"])):
+                    if n_particles_added >= n_samp:
+                        break
+                    mrc = class_avgs[pckr_name]["mrcs"][i]
+                    score_idx = class_avgs[pckr_name]["idxs"][i]
+                    score = maxes[score_idx]
+                    if score >= x_rng[0] and score <= x_rng[1]:
+                        samples[pckr_name][x_rng].append({"mrc": mrc, "score": score})
+                        n_particles_added += 1
 
-    hist_ax.set_xlabel("Max Correlation Score")
+    hist_ax.set_xlabel("Correlation")
     hist_ax.set_ylabel("Frequency")
     hist_ax.legend(loc="best", frameon=False)
     plt.savefig(out_dir / "max_score_hist.png", bbox_inches="tight")
@@ -850,22 +857,23 @@ def plot_max_score_hist(
     pckr_offset = 0
     for pckr_name, v in samples.items():
         for j, (x_rng, samp_imgs) in enumerate(v.items()):
+            # add label for each row in col 0
+            ax = samp_fig.add_subplot(samp_gs[pckr_offset + j, 0])
+            ax.axis("off")
+            ax.text(
+                0.5,
+                0.5,
+                f"{pckr_name}\n{x_rng[0]}-{x_rng[1]}",
+                va="center",
+                ha="right",
+                fontsize=8,
+            )
+            # add images to each row
             for k, img in enumerate(samp_imgs):
-                ax = samp_fig.add_subplot(samp_gs[pckr_offset + j, k])
+                ax = samp_fig.add_subplot(samp_gs[pckr_offset + j, k + 1])
                 ax.axis("off")
-                # add label for each row in col 0
-                if k == 0:
-                    ax.text(
-                        0.5,
-                        0.5,
-                        f"{pckr_name}\n{x_rng[0]}-{x_rng[1]}",
-                        va="center",
-                        ha="right",
-                        fontsize=8,
-                    )
-                else:
-                    ax.imshow(img["mrcs"], cmap="gray")
-                    ax.set_title(f"{img['score']:.3f}", fontsize=8)
+                ax.imshow(img["mrc"], cmap="gray")
+                ax.set_title(f"{img['score']:.3f}", fontsize=8)
         pckr_offset += len(v)
 
     plt.savefig(out_dir / "score_hist_samples.png", bbox_inches="tight")
@@ -1015,7 +1023,7 @@ if __name__ == "__main__":
         a.gt_name,
         clip_to=a.score_clip,
         samp_xval_ranges={
-            k: [(0.02, 0.1), (0.34, 0.36), (0.39, 0.41), (0.44, 0.46)]
+            k: [(-0.1, 0), (0, 0.1), (0.34, 0.36), (0.39, 0.41), (0.44, 0.46)]
             for k in class_names
             if k != a.gt_name
         },
