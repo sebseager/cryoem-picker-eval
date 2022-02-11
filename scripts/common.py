@@ -74,3 +74,18 @@ def style_ax(ax, xlab="", ylab="", aspect="auto", xlim=None, ylim=None):
 
         # useful for chaining (is ax modified in place?)
         return ax
+
+
+def read_mrc(path, mmap=False):
+    """Use the mrcfile module to read data from micrograph at given path."""
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if mmap:
+            with mrcfile.mmap(path, mode="r", permissive=True) as f:
+                mrc = f.data
+        else:
+            with mrcfile.open(path, mode="r", permissive=True) as f:
+                mrc = f.data
+
+    return mrc
