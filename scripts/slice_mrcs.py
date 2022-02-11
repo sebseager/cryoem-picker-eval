@@ -1,5 +1,6 @@
 import argparse
 import mrcfile
+from pathlib import Path
 from common import log, read_mrc
 
 if __name__ == "__main__":
