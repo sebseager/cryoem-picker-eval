@@ -27,8 +27,8 @@ if __name__ == "__main__":
 
     mrcs_paths = [Path(x) for x in a.mrcs_files]
 
-    for i, mrc in enumerate(mrcs_paths):
-        mrc = read_mrc(p, mmap=True)
+    for i, path in enumerate(mrcs_paths):
+        mrc = read_mrc(path, mmap=True)
         # single images
         if mrc.data.ndim == 2:
             new_mrc = eval(f"mrc.data[{a.sh}, {a.sw}]")
