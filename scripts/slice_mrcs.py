@@ -22,26 +22,37 @@ if __name__ == "__main__":
         required=True,
         help="Output directory (will be created if it does not exist)",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing files",
+    )
 
     a = parser.parse_args()
 
     mrcs_paths = [Path(x) for x in a.mrcs_files]
 
     for i, path in enumerate(mrcs_paths):
+        log(f"processing {path}")
+
         mrc = read_mrc(path, mmap=True)
+
         # single images
-        if mrc.data.ndim == 2:
-            new_mrc = eval(f"mrc.data[{a.sh}, {a.sw}]")
-        elif mrc.data.ndim == 3:
-            new_mrc = eval(f"mrc.data[:, {a.sh}, {a.sw}]")
+        if mrc.ndim == 2:
+            new_mrc = eval(f"mrc[{a.sh}, {a.sw}]")
+        elif mrc.ndim == 3:
+            new_mrc = eval(f"mrc[:, {a.sh}, {a.sw}]")
         else:
-            log(f"Unsupported shape for {mrcs_paths[i]}: {mrc.data.shape}")
+            log(f"unsupported shape for {mrcs_paths[i]}: {mrc.shape}", lvl=1)
             continue
 
-        log(f"output shape: {new_mrc.shape}")
+        log(f"resizing (h, w): {mrc.shape} --> {new_mrc.shape}")
         new_mrc_path = Path(a.o) / mrcs_paths[i].name
 
-        log(f"saving to {new_mrc_path}")
-        with mrcfile.new(new_mrc_path, overwrite=a.force) as f_out:
-            f_out.set_data(new_mrc)
-            f_out.set_header(mrc.header)
+        try:
+            with mrcfile.new(new_mrc_path, overwrite=a.force) as f_out:
+                f_out.set_data(new_mrc)
+            log(f"saved to {new_mrc_path}")
+        except ValueError:
+            log(f"{new_mrc_path} already exists; use --force to overwrite", lvl=1)
+            continue

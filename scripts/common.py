@@ -78,7 +78,7 @@ def style_ax(ax, xlab="", ylab="", aspect="auto", xlim=None, ylim=None):
         return ax
 
 
-def read_mrc(path, mmap=False):
+def read_mrc(path, mmap=False, with_header=False):
     """Use the mrcfile module to read data from micrograph at given path."""
 
     with warnings.catch_warnings():
@@ -90,4 +90,7 @@ def read_mrc(path, mmap=False):
             with mrcfile.open(path, mode="r", permissive=True) as f:
                 mrc = f.data
 
-    return mrc
+    if with_header:
+        return f.header, mrc
+    else:
+        return mrc
