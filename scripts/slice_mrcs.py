@@ -26,9 +26,9 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     mrcs_paths = [Path(x) for x in a.mrcs_files]
-    mrcs_files = [read_mrc(p) for p in mrcs_paths]
 
-    for i, mrc in enumerate(mrcs_files):
+    for i, mrc in enumerate(mrcs_paths):
+        mrc = read_mrc(p, mmap=True)
         # single images
         if mrc.data.ndim == 2:
             new_mrc = eval(f"mrc.data[{a.sh}, {a.sw}]")

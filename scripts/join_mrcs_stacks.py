@@ -24,7 +24,7 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     mrcs_paths = [Path(x) for x in a.mrcs_files]
-    mrcs_files = [read_mrc(p) for p in mrcs_paths]
+    mrcs_files = [read_mrc(p, mmap=True) for p in mrcs_paths]
 
     # make sure all files are 3d with stack dimension as 0th axis
     for i, mrc in enumerate(mrcs_files):
