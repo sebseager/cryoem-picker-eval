@@ -1,5 +1,6 @@
 import sys
 import warnings
+import mrcfile
 
 
 def log(*msgs, lvl=0, quiet=False):
