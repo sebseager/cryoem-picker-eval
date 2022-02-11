@@ -1,5 +1,6 @@
 import argparse
 import mrcfile
+import numpy as np
 from pathlib import Path
 from common import log, read_mrc
 

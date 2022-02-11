@@ -1,4 +1,5 @@
 import sys
+import warnings
 
 
 def log(*msgs, lvl=0, quiet=False):
