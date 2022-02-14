@@ -41,7 +41,6 @@ def replace_filename(
     skip_last=0,
 ):
     """Replace substring with replacement in path.
-    Ignore skip_suffixes number of path suffixes.
     Ignore first skip_first occurrences and last skip_last occurrences.
     """
 
@@ -152,16 +151,14 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     # verification
-    if a.skip_first < 0 or a.skip_last < 0 or a.skip_suffixes < 0:
+    if a.skip_first < 0 or a.skip_last < 0:
         _log("skip_* args must be >= 0", lvl=2)
 
     _log(f"find substring: {a.f}")
     _log(f"replace with substring: {a.r}")
 
     for from_path in tqdm(a.files):
-        to_path = replace_filename(
-            from_path, a.f, a.r, a.skip_suffixes, a.skip_first, a.skip_last
-        )
+        to_path = replace_filename(from_path, a.f, a.r, a.skip_first, a.skip_last)
 
         # behavior
         if a.b == "inplace":
