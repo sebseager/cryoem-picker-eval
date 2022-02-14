@@ -35,7 +35,7 @@ def replace_filename(
 
     tqdm.write(f"{from_name} -> {to_name}")
 
-    return path.parent / to_name
+    return from_name.parent / to_name
 
 
 def move_file(from_path, to_path, do_force):
