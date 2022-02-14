@@ -37,7 +37,6 @@ def replace_filename(
     path,
     substring,
     replacement,
-    skip_suffixes=0,
     skip_first=0,
     skip_last=0,
 ):
@@ -46,16 +45,8 @@ def replace_filename(
     Ignore first skip_first occurrences and last skip_last occurrences.
     """
 
-    path = Path(path).expanduser().resolve()
-    if skip_suffixes > len(path.suffixes):
-        _log(
-            f"skip_suffixes {skip_suffixes} > len({path.suffixes})",
-            1,
-        )
-
+    name = Path(path).name
     substring = re.escape(substring)
-    exts_len = sum(len(s) for s in path.suffixes)
-    from_name = path.name[:-exts_len] + "".join(path.suffixes[: -skip_suffixes or None])
     matches = [x for x in re.finditer(substring, from_name)]
     matches = matches[skip_first : -skip_last or None]
 
@@ -67,9 +58,6 @@ def replace_filename(
     for i, m in enumerate(matches):
         next_start = matches[i + 1].start() if i + 1 < len(matches) else None
         to_name += replacement + from_name[m.end() : next_start]
-
-    # put skipped suffixes back
-    to_name += "".join(path.suffixes[-skip_suffixes or None :])
 
     tqdm.write(f"{from_name} -> {to_name}")
 
@@ -142,12 +130,6 @@ if __name__ == "__main__":
         help="Substring to replace with (NOTE: single-quote this in bash to prevent parameter expansion)",
         type=str,
         required=True,
-    )
-    parser.add_argument(
-        "--skip_suffixes",
-        help="Number of extensions (successive dot-delimted strings at end of filename) to ignore",
-        type=int,
-        default=0,
     )
     parser.add_argument(
         "--skip_first",
