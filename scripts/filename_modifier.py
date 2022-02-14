@@ -19,6 +19,7 @@ def replace_filename(
     Ignore first skip_first occurrences and last skip_last occurrences.
     """
 
+    path = Path(path).expanduser().resolve()
     from_name = Path(path).name
     substring = re.escape(substring)
     matches = [x for x in re.finditer(substring, from_name)]
@@ -35,7 +36,7 @@ def replace_filename(
 
     tqdm.write(f"{from_name} -> {to_name}")
 
-    return from_name.parent / to_name
+    return path.parent / to_name
 
 
 def move_file(from_path, to_path, do_force):
