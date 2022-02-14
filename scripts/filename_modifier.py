@@ -5,32 +5,7 @@ import re
 import argparse
 from tqdm import tqdm
 from pathlib import Path
-
-
-# utils
-
-
-def _log(msg, lvl=0, quiet=False):
-    """Format and print message to console with one of the following logging levels:
-    0: info (print and continue execution; ignore if quiet=True)
-    1: warning (print and continue execution)
-    2: error (print and exit with code 1)
-    """
-
-    if lvl == 0 and quiet:
-        return
-
-    prefix = ""
-    if lvl == 0:
-        prefix = "INFO: "
-    elif lvl == 1:
-        prefix = "WARN: "
-    elif lvl == 2:
-        prefix = "CRITICAL: "
-
-    print(f"{prefix}{msg}")
-    if lvl == 2:
-        sys.exit(1)
+from common import log
 
 
 def replace_filename(
@@ -44,13 +19,13 @@ def replace_filename(
     Ignore first skip_first occurrences and last skip_last occurrences.
     """
 
-    name = Path(path).name
+    from_name = Path(path).name
     substring = re.escape(substring)
     matches = [x for x in re.finditer(substring, from_name)]
     matches = matches[skip_first : -skip_last or None]
 
     if len(matches) == 0:
-        _log(f"no matches for substring {substring} in {from_name}", 1)
+        log(f"no matches for substring {substring} in {from_name}", 1)
         return path
 
     to_name = from_name[: matches[0].start()]
@@ -72,7 +47,7 @@ def move_file(from_path, to_path, do_force):
     to_path = Path(to_path).expanduser().resolve()
 
     if not do_force and to_path.exists():
-        _log(f"use --force to overwrite existing file {to_path}", lvl=2)
+        log(f"use --force to overwrite existing file {to_path}", lvl=2)
 
     os.rename(from_path, to_path)
 
@@ -86,7 +61,7 @@ def copy_file(from_path, to_path, do_force):
     to_path = Path(to_path).expanduser().resolve()
 
     if not do_force and to_path.exists():
-        _log(f"use --force to overwrite existing file {to_path}", lvl=2)
+        log(f"use --force to overwrite existing file {to_path}", lvl=2)
 
     shutil.copy(str(from_path), str(to_path))
 
@@ -100,7 +75,7 @@ def link_file(from_path, to_path, do_force):
     to_path = Path(to_path).expanduser().resolve()
 
     if not do_force and to_path.exists():
-        _log(f"use --force to overwrite existing file {to_path}", lvl=2)
+        log(f"use --force to overwrite existing file {to_path}", lvl=2)
 
     os.symlink(from_path, to_path)
 
@@ -152,10 +127,10 @@ if __name__ == "__main__":
 
     # verification
     if a.skip_first < 0 or a.skip_last < 0:
-        _log("skip_* args must be >= 0", lvl=2)
+        log("skip_* args must be >= 0", lvl=2)
 
-    _log(f"find substring: {a.f}")
-    _log(f"replace with substring: {a.r}")
+    log(f"find substring: {a.f}")
+    log(f"replace with substring: {a.r}")
 
     for from_path in tqdm(a.files):
         to_path = replace_filename(from_path, a.f, a.r, a.skip_first, a.skip_last)
@@ -168,6 +143,6 @@ if __name__ == "__main__":
         elif a.b == "copy":
             copy_file(from_path, to_path, a.force)
         else:
-            _log(f"unrecognized behavior {a.b}", lvl=2)
+            log(f"unrecognized behavior {a.b}", lvl=2)
 
-    _log(f"done.")
+    log(f"done.")
