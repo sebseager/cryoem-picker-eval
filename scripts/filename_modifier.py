@@ -26,7 +26,7 @@ def replace_filename(
     matches = matches[skip_first : -skip_last or None]
 
     if len(matches) == 0:
-        log(f"no matches for substring {substring} in {from_name}", 1)
+        log(f"no matches for substring {substring} in {from_name}", lvl=1)
         return path
 
     to_name = from_name[: matches[0].start()]
