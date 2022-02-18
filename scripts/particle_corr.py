@@ -21,7 +21,7 @@ from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
 import seaborn as sns
 from coord_converter import star_to_df
-from common import log
+from common import log, read_mrc
 from consts import *
 
 SQRT_2 = math.sqrt(2)
@@ -49,24 +49,6 @@ def _format_axes(ax):
     ax.get_yaxis().set_ticks([])
     ax.get_xaxis().set_ticklabels([])
     ax.get_yaxis().set_ticklabels([])
-
-
-def read_mrc(path, mmap=False):
-    """
-    Use the mrcfile module to read data from micrograph at given path. Returns
-    numerical array containing micrograph data.
-    """
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        if mmap:
-            with mrcfile.mmap(path, mode="r", permissive=True) as f:
-                mrc = f.data
-        else:
-            with mrcfile.open(path, mode="r", permissive=True) as f:
-                mrc = f.data
-
-    return mrc.astype(np.float32)
 
 
 def read_class_avgs(mrcs_paths, star_paths, n_max_classes=None):

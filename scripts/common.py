@@ -1,6 +1,7 @@
 import sys
 import warnings
 import mrcfile
+import numpy as np
 
 
 def log(*msgs, lvl=0, quiet=False):
@@ -93,4 +94,4 @@ def read_mrc(path, mmap=False, with_header=False):
     if with_header:
         return f.header, mrc
     else:
-        return mrc
+        return mrc.astype(np.float32)
