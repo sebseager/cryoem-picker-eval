@@ -320,10 +320,6 @@ if __name__ == "__main__":
     out_path = a.out_dir / f"scores_{suffix}.npy"
     log(f"saving scores to {out_path}")
 
-    import pdb
-
-    pdb.set_trace()
-
     # fill below diagonal and save to disk
     fill_upper_triangle(scores)
     np.save(out_path, scores)
