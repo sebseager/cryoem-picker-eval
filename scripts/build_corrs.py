@@ -161,9 +161,11 @@ def calc_scores(
     angles = np.arange(0, 360, step=angle_step)
     n_imgs = sum(len(v) for v in class_avgs.values())
     scores = np.full((n_imgs, n_imgs), np.nan, dtype="float32")
+    y_offset = 0
 
     # iterate over all mrcs files
     for name_y, mrcs_y in class_avgs.items():
+        x_offset = 0
 
         # iterate over all mrcs files again (nxn correlation)
         for name_x, mrcs_x in class_avgs.items():
@@ -172,25 +174,30 @@ def calc_scores(
             if gt_vs_rest:
                 if name_x == gt_name and name_y == gt_name:
                     log("skipping GT vs. GT")
+                    x_offset += len(mrcs_x)
                     continue
                 if gt_name not in (name_x, name_y):
                     log("skipping non-GT vs. non-GT")
+                    x_offset += len(mrcs_x)
                     continue
 
             for j, img_y in enumerate(tqdm(mrcs_y)):
+                j = j + y_offset
                 img_y_scaled = standardize_arr(get_inscribed_square(img_y))
                 img_y_ones = np.ones(img_y_scaled.shape)
                 img_y_conj = np.flipud(np.fliplr(img_y_scaled)).conj()
                 img_y_shape_prod = np.prod(img_y_scaled.shape)
 
                 for k, img_x in enumerate(mrcs_x):
+                    k = k + x_offset
                     # if past diagonal, skip
                     if k > j:
                         continue
 
                     # skip if we didn't ask for this class
-                    if gt_classes is not None and k not in gt_classes:
-                        continue
+                    if gt_classes:
+                        if name_x == gt_name and k - x_offset not in gt_classes:
+                            continue
 
                     # rotate img_x and calculate correlation with img_y
                     for ang in angles:
@@ -231,6 +238,9 @@ def calc_scores(
                         best_score = scores[j, k]
                         if np.isnan(best_score) or score > best_score:
                             scores[j, k] = score
+
+            x_offset += len(mrcs_x)
+        y_offset += len(mrcs_y)
 
     return scores
 
