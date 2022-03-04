@@ -242,7 +242,7 @@ def process_conversion(
         cols[k] = v if cols[k] == AUTO else cols[k]
 
     _log(f"using the following input column mapping:", quiet=quiet)
-    _log(f"\t{cols}", 0, quiet=quiet)
+    _log(f"{cols}", 0, quiet=quiet)
 
     out_dfs = {}
     for name, df in dfs.items():
@@ -337,7 +337,7 @@ def process_conversion(
             df_to_star(df, out_path, do_force=do_force)
         elif out_fmt in ("box", "tsv"):
             _log(f"using the following output column order:", quiet=quiet)
-            _log(f"\t{out_col_order}", quiet=quiet)
+            _log(f"{out_col_order}", quiet=quiet)
             df_to_tsv(
                 df,
                 out_col_order,
