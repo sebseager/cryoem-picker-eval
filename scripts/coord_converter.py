@@ -1,4 +1,5 @@
 import sys
+import os
 import re
 from pathlib import Path
 import pandas as pd
@@ -308,6 +309,7 @@ def process_conversion(
 
     for name, df in out_dfs.items():
         filename = f"{Path(name).stem}{suffix}.{out_fmt}"
+        filename = filename.replace(os.sep, "_")
         out_path = Path(out_dir) / filename
         if out_fmt == "star":
             df_to_star(df, out_path, do_force=do_force)
