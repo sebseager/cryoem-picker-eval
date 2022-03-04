@@ -307,13 +307,15 @@ def process_conversion(
     if out_dir is None:
         return out_dfs
 
+    out_dir = Path(out_dir)
+
     for name, df in out_dfs.items():
         filename = Path(name)
-        parent = filename.parents[0]
+        parent = out_dir / filename.parents[0]
         if not parent.is_dir():
-            parent.mkdir(parents=True, exist_ok=False)
-        out_file = f"{parent / filename.stem}{suffix}.{out_fmt}"
-        out_path = Path(out_dir) / out_file
+            parent.mkdir(parents=True)
+        out_file = f"{filename.stem}{suffix}.{out_fmt}"
+        out_path = parent / out_file
         if out_fmt == "star":
             df_to_star(df, out_path, do_force=do_force)
         elif out_fmt in ("box", "tsv"):
