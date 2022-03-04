@@ -423,7 +423,7 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     # validation
-    if a.f in ("star", "tsv") and a.b is None:
+    if a.f in ("star", "tsv") and a.t != "star" and a.b is None:
         _log(f"box size required for '{a.f}' input", 2)
     if a.single_out and a.multi_out:
         _log(f"cannot fulfill both single_out and multi_out flags", 2)
