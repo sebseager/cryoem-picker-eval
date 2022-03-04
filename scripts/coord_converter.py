@@ -307,14 +307,13 @@ def process_conversion(
     if out_dir is None:
         return out_dfs
 
-    out_dir = Path(out_dir)
+    out_dir = Path(out_dir).resolve()
+    os.chdir(out_dir)
 
     for name, df in out_dfs.items():
-        filename = Path(name)
-        subdirs = filename.parents[0]
-        parent = out_dir / subdirs if subdirs != Path(".") else out_dir
-        if not parent.is_dir():
-            parent.mkdir(parents=True)
+        filename = Path(name).resolve()
+        parent = filename.parents[0]
+        parent.mkdir(parents=True, exist_ok=True)
         out_file = f"{filename.stem}{suffix}.{out_fmt}"
         out_path = parent / out_file
         if out_fmt == "star":
