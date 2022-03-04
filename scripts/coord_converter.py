@@ -104,7 +104,7 @@ def star_to_df(path):
                 try:
                     header[int(header_entry[1]) - 1] = header_entry[0].strip()
                 except ValueError:
-                    _log("STAR file not properly formatted", 2)
+                    _log("STAR file not properly formatted", lvl=2)
             elif header and _has_numbers(line):
                 header_line_count = i
                 break  # we've reached coordinate data
@@ -159,7 +159,7 @@ def df_to_star(df, out_path, do_force=False):
         _make_parent_dir(out_path)
     else:
         if _path_occupied(out_path):
-            _log("re-run with the force flag to replace existing files", 2)
+            _log("re-run with the force flag to replace existing files", lvl=2)
 
     df_cols = list(df.columns)
     star_loop = "data_\n\nloop_\n"
@@ -187,7 +187,7 @@ def df_to_tsv(df, col_order, out_path, include_header=False, do_force=False):
         _make_parent_dir(out_path)
     else:
         if _path_occupied(out_path):
-            _log("re-run with the force flag to replace existing files", 2)
+            _log("re-run with the force flag to replace existing files", lvl=2)
 
     out_cols = [c for c in col_order if c in df.columns]
     df[out_cols].to_csv(out_path, header=include_header, sep="\t", index=False)
@@ -220,23 +220,28 @@ def process_conversion(
 
     # read input files into dataframes
     dfs = {}
-    if in_fmt == "star":
-        default_cols = STAR_HEADER_MAP
-        dfs = {p: star_to_df(p) for p in paths}
-    elif in_fmt == "box":
-        default_cols = BOX_HEADER_MAP
-        dfs = {p: tsv_to_df(p) for p in paths}
-    elif in_fmt == "tsv":
-        default_cols = TSV_HEADER_MAP
-        dfs = {p: tsv_to_df(p) for p in paths}
-    else:
-        _log("unknown format", 2)
+
+    try:
+        if in_fmt == "star":
+            default_cols = STAR_HEADER_MAP
+            dfs = {p: star_to_df(p) for p in paths}
+        elif in_fmt == "box":
+            default_cols = BOX_HEADER_MAP
+            dfs = {p: tsv_to_df(p) for p in paths}
+        elif in_fmt == "tsv":
+            default_cols = TSV_HEADER_MAP
+            dfs = {p: tsv_to_df(p) for p in paths}
+        else:
+            _log("unknown format", lvl=2)
+    except pd.errors.ParserError as e:
+        _log(f"input '{in_fmt}' file not properly formatted")
+        _log(f"{repr(e)}", lvl=2)
 
     # apply any default cols needed
     for k, v in default_cols.items():
         cols[k] = v if cols[k] == AUTO else cols[k]
 
-    _log(f"using the following input column mapping:", 0, quiet=quiet)
+    _log(f"using the following input column mapping:", quiet=quiet)
     _log(f"\t{cols}", 0, quiet=quiet)
 
     out_dfs = {}
@@ -281,11 +286,11 @@ def process_conversion(
                         df[cl] = df[cl].astype(int)
 
         except KeyError as e:
-            _log(f"did not find column {e} in input columns ({list(df.columns)})", 2)
+            _log(f"didn't find column {e} in input columns ({list(df.columns)})", lvl=2)
         except TypeError as e:
-            _log(f"unexpected type in input columns ({e})", 2)
+            _log(f"unexpected type in input columns ({e})", lvl=2)
         except ValueError as e:
-            _log(f"unexpected value in input columns ({e})", 2)
+            _log(f"unexpected value in input columns ({e})", lvl=2)
 
         if out_fmt in ("star", "tsv"):
             out_cols = ["x", "y", "conf", "name"]
@@ -302,7 +307,7 @@ def process_conversion(
             grouped_by_mrc = pd.concat(out_dfs, ignore_index=True).groupby("name")
             out_dfs = {k: df.drop("name", axis=1) for k, df in grouped_by_mrc}
         else:
-            _log("cannot fulfill multi_out without micrograph name information", 1)
+            _log("cannot fulfill multi_out without micrograph name information", lvl=1)
 
     if out_dir is None:
         return out_dfs
@@ -331,8 +336,8 @@ def process_conversion(
         if out_fmt == "star":
             df_to_star(df, out_path, do_force=do_force)
         elif out_fmt in ("box", "tsv"):
-            _log(f"using the following output column order:", 0, quiet=quiet)
-            _log(f"\t{out_col_order}", 0, quiet=quiet)
+            _log(f"using the following output column order:", quiet=quiet)
+            _log(f"\t{out_col_order}", quiet=quiet)
             df_to_tsv(
                 df,
                 out_col_order,
@@ -341,7 +346,7 @@ def process_conversion(
                 do_force=do_force,
             )
 
-        _log(f"wrote to {out_path}")
+        _log(f"wrote to {out_path}", quiet=quiet)
 
 
 if __name__ == "__main__":
@@ -441,14 +446,14 @@ if __name__ == "__main__":
 
     # validation
     if a.f in ("star", "tsv") and a.t != "star" and a.b is None:
-        _log(f"box size required for '{a.f}' input", 2)
+        _log(f"box size required for '{a.f}' input", lvl=2)
     if a.single_out and a.multi_out:
-        _log(f"cannot fulfill both single_out and multi_out flags", 2)
+        _log(f"cannot fulfill both single_out and multi_out flags", lvl=2)
 
     a.input = [Path(p).resolve() for p in np.atleast_1d(a.input)]
 
     if not all(p.is_file() for p in a.input):
-        _log(f"bad input paths", 2)
+        _log(f"bad input paths", lvl=2)
 
     process_conversion(
         paths=a.input,
@@ -467,4 +472,4 @@ if __name__ == "__main__":
         quiet=a.quiet,
     )
 
-    _log("done.", 0, quiet=a.quiet)
+    _log("done.", quiet=a.quiet)
