@@ -311,7 +311,8 @@ def process_conversion(
 
     for name, df in out_dfs.items():
         filename = Path(name)
-        parent = out_dir / filename.parents[0]
+        subdirs = filename.parents[0]
+        parent = out_dir / subdirs if subdirs != Path(".") else out_dir
         if not parent.is_dir():
             parent.mkdir(parents=True)
         out_file = f"{filename.stem}{suffix}.{out_fmt}"
@@ -343,7 +344,7 @@ if __name__ == "__main__":
         "input", help="Path(s) to input particle coordinates", nargs="+"
     )
     parser.add_argument(
-        "out_dir",
+        "-o",
         help="Output directory in which to store generated coordinate files (will be "
         "created if it does not exist)",
     )
