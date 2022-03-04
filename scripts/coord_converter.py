@@ -311,11 +311,23 @@ def process_conversion(
     os.chdir(out_dir)
 
     for name, df in out_dfs.items():
-        filename = Path(name).resolve()
-        parent = filename.parents[0]
+        full_path = Path(name).resolve()
+        parent = full_path.parents[0]
+        if full_path in [p.resolve() for p in paths]:
+            # if this path is found in input exactly, replace parents with out_dir
+            # since there are no other subdirectories to worry about
+            parent = out_dir
+        else:
+            # this either means `name` was a relative path (in which case it's now
+            # already in out_dir because it was resolved after os.chdir) or a different
+            # absolute path; in either case, we must ensure the output goes to out_dir
+            if os.path.commonpath([parent, out_dir]) != out_dir:
+                parent = out_dir / parent
+
         parent.mkdir(parents=True, exist_ok=True)
-        out_file = f"{filename.stem}{suffix}.{out_fmt}"
+        out_file = f"{full_path.stem}{suffix}.{out_fmt}"
         out_path = parent / out_file
+
         if out_fmt == "star":
             df_to_star(df, out_path, do_force=do_force)
         elif out_fmt in ("box", "tsv"):
