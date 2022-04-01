@@ -1,6 +1,7 @@
 import os
 import pdb
 import math
+from glob import glob
 from tqdm import tqdm
 import argparse
 from pathlib import Path
@@ -51,6 +52,23 @@ def _format_axes(ax):
     ax.get_yaxis().set_ticklabels([])
 
 
+def combine_corr_data(out_dir):
+    out = None
+    log("loading stored correlations")
+    files = glob(str(Path(out_dir) / "scores_*.npy"))
+    for f in tqdm(files):
+        arr = np.load(f)
+        if out is None:
+            out = arr
+        else:
+            if arr.shape != out.shape:
+                log(f"corr data shapes do not match: {arr.shape} != {out.shape}", lvl=2)
+                return None
+            idx = np.where(~np.isnan(arr))
+            out[idx] = arr[idx]
+    return out.T
+
+
 def read_class_avgs(mrcs_paths, star_paths, n_max_classes=None):
     if not star_paths:
         star_paths = [None for _ in mrcs_paths]
@@ -86,18 +104,6 @@ def read_class_avgs(mrcs_paths, star_paths, n_max_classes=None):
         )
 
     return class_avgs
-
-
-def load_np_files(out_dir, do_recalc_all=False):
-    """Loads numpy arrays in the given output directory."""
-
-    if do_recalc_all:
-        return None
-
-    try:
-        return np.load(out_dir / "corr_data.npy", allow_pickle=True)
-    except FileNotFoundError:
-        return None
 
 
 def fill_below_diag_inplace(arr):
@@ -287,111 +293,6 @@ def inscribed_square_from_mask(class_mrc, angle_deg=0, func=find_largest_square_
     cropped_mrc = mrc[r : r + size, c : c + size]
     mrc = rotate(cropped_mrc, angle_deg, reshape=False, cval=0)
     return mrc
-
-
-def build_corrs(
-    all_imgs,
-    angle_step,
-    class_avgs,
-    do_noise_zeros=False,
-    gt_vs_rest=False,
-    gt_name="GT",
-    save_full_corrs=False,
-):
-    angles = np.arange(0, 360, step=angle_step)
-
-    # make all-vs-all lists
-    num_imgs = len(all_imgs)
-
-    # all-vs-all matrices to hold various correlation results
-    corr_data = np.full((num_imgs, num_imgs, len(DATA_IDXS)), np.nan, dtype="object")
-
-    # j is rows, k is cols
-    for j, img_y in enumerate(tqdm(all_imgs)):
-        # figure out what picker is in this row
-        pckr_name_j = get_pckr_name(j, class_avgs)
-
-        # we'll set this after we check GT-vs-rest condition below
-        img_y_scaled = img_y_ones = img_y_conj = None
-
-        for k, img_x in enumerate(all_imgs):
-            # skip if we're below the matrix diagonal
-            if j > k:
-                continue
-
-            # figure out what picker is in this column
-            pckr_name_k = get_pckr_name(k, class_avgs)
-
-            # check GT-vs-rest condition
-            if gt_vs_rest:
-                if pckr_name_j == gt_name and pckr_name_k == gt_name:
-                    continue  # GT vs GT
-                if gt_name not in (pckr_name_j, pckr_name_k):
-                    continue  # non-GT vs non-GT
-
-            # set up img_y if we haven't already
-            if img_y_scaled is None:
-                img_y_scaled = standardize_arr(inscribed_square_from_mask(img_y))
-                img_y_ones = np.ones(img_y_scaled.shape)
-                img_y_conj = np.flipud(np.fliplr(img_y_scaled)).conj()
-
-            # seed with coordinates to get reproducible results
-            # replace mask (zeros) with uniform random values between
-            # image min and max
-            if do_noise_zeros:
-                np.random.seed(int("%s%s0" % (j, k)))
-                img_x[img_x == 0.0] = np.random.uniform(
-                    img_x.min(), img_x.max(), np.count_nonzero(img_x == 0)
-                )
-                np.random.seed(int("%s%s1" % (j, k)))
-                img_y[img_y == 0.0] = np.random.uniform(
-                    img_y.min(), img_y.max(), np.count_nonzero(img_y == 0)
-                )
-                np.random.seed(None)  # re-seed from /dev/urandom
-
-            # build 2d correlations for each angle offset
-            for theta in angles:
-                img_x_scaled = standardize_arr(inscribed_square_from_mask(img_x, theta))
-                corr = fftconvolve(img_x_scaled, img_y_conj, mode=FFT_MODE)
-
-                # https://github.com/Sabrewarrior/normxcorr2-python/blob/master/normxcorr2.py
-                tmp = fftconvolve(
-                    np.square(img_x_scaled), img_y_ones, mode=FFT_MODE
-                ) - np.square(fftconvolve(img_x_scaled, img_y_ones, mode=FFT_MODE)) / (
-                    np.prod(img_y_scaled.shape)
-                )
-
-                # remove small machine precision errors after subtraction
-                tmp[np.where(tmp < 0)] = 0
-
-                corr = corr / np.sqrt(tmp * np.sum(np.square(img_y_scaled)))
-
-                # remove any divisions by 0 or very close to 0
-                corr[np.where(np.logical_not(np.isfinite(corr)))] = 0
-
-                # find correlation max
-                center_xy = np.subtract(np.divide(corr.shape, 2.0), (1, 1))
-                max_val = np.max(corr)
-                brightest_spot = np.unravel_index(np.argmax(corr), corr.shape)
-                dist = np.linalg.norm(brightest_spot - center_xy)
-
-                # score formula
-                h, w = corr.shape[0], corr.shape[1]
-                diag_radius = math.sqrt(w**2 + h**2) / 2
-                score = max_val - dist / diag_radius
-
-                # compare score and save everything if better
-                best_score = corr_data[j, k, DATA_IDXS["score"]]
-                if np.isnan(best_score) or score > best_score:
-                    corr_data[j, k, DATA_IDXS["angle"]] = theta
-                    corr_data[j, k, DATA_IDXS["corr_val"]] = max_val
-                    corr_data[j, k, DATA_IDXS["score"]] = score
-                    corr_data[j, k, DATA_IDXS["corr_point"]] = brightest_spot
-                    corr_data[j, k, DATA_IDXS["img_shape"]] = (h, w)
-                    if save_full_corrs:
-                        corr_data[j, k, DATA_IDXS["corr_data"]] = corr
-
-    return corr_data
 
 
 def get_pckr_name(idx, class_avgs):
@@ -800,7 +701,9 @@ def plot_max_score_hist(
         slice_start = class_avgs[pckr_name]["idxs"][0]
         slice_end = class_avgs[pckr_name]["idxs"][-1] + 1
         try:
-            y, edges = np.histogram(maxes[slice(slice_start, slice_end)], bins=80)
+            y, edges = np.histogram(
+                maxes[slice(slice_start, slice_end)], bins=80, density=True
+            )
         except ValueError:
             continue  # skip all-nan slices
         centers = 0.5 * (edges[1:] + edges[:-1])
@@ -874,8 +777,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         help="Path(s) to input *.mrcs class average image stacks  "
-        "(NOTE: *.mrcs files should be renamed from default and must have unique "
-        "file names; file names will be used in the figure legend)",
+        "(NOTE: MUST be in the same order as was passed to build_corrs.py)",
         nargs="+",
     )
     parser.add_argument(
@@ -906,11 +808,6 @@ if __name__ == "__main__":
         default="GT",
     )
     parser.add_argument(
-        "--noise",
-        help="Replace RELION zero mask with random noise",
-        action="store_true",
-    )
-    parser.add_argument(
         "--score_clip",
         help="Specify two decimal values between which to clip correlation scores "
         "(default is no clipping)",
@@ -921,21 +818,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--hm_nums_off",
         help="Turn of image numbering on heatmap (for large plots)",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--gt_vs_rest",
-        help="Only calculate ground truth (see --gt_name) vs. the rest of the pickers.",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--save_full_corrs",
-        help="Save full correlation arrays for plotting (uses more disk and memory).",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--force",
-        help="Overwrite (recalculate) any temporary data files in output directory",
         action="store_true",
     )
 
@@ -968,34 +850,16 @@ if __name__ == "__main__":
     log(f"mrcs shapes", [x["mrcs"].shape for x in class_avgs.values()])
 
     all_imgs = [avg for v in class_avgs.values() for avg in v["mrcs"]]
-    corr_data = load_np_files(a.out_dir, do_recalc_all=a.force)
 
-    if corr_data is not None:
-        log("loaded existing data")
-    else:
-        log("calculating correlations")
-        corr_data = build_corrs(
-            all_imgs,
-            a.angle_step,
-            class_avgs,
-            do_noise_zeros=a.noise,
-            gt_vs_rest=a.gt_vs_rest,
-            gt_name=a.gt_name,
-            save_full_corrs=a.save_full_corrs,
-        )
-
-        # fill missing values below main diagonal
-        fill_below_diag_inplace(corr_data)
-
-        # save to disk
-        np.save(a.out_dir / "corr_data.npy", corr_data)
+    # combine correlation data into single array
+    max_scores = combine_corr_data(a.out_dir)
+    if max_scores is None:
+        log("no correlation data found", lvl=2)
 
     # DEBUG: limit heatmap and distribution to only these classes
     # set to None to disable
     SPECIFY_CLASSES = None
     # SPECIFY_CLASSES = {"GT": [0, 1, 2, 3], "APPLEpicker": [1, 3, 4, 5]}
-
-    max_scores = np.array(corr_data[:, :, DATA_IDXS["score"]], dtype=np.float32)
 
     log("plotting correlation max score histogram")
     plot_max_score_hist(
@@ -1011,6 +875,12 @@ if __name__ == "__main__":
         },
     )
 
+    log("plotting class average distributions")
+    plot_class_distributions(a.out_dir, class_avgs, specify_classes=SPECIFY_CLASSES)
+
+    # log("plotting correlation previews")
+    # plot_corr_previews(a.out_dir, corr_data, class_names)
+
     log("plotting heatmap")
     plot_heatmap(
         a.out_dir,
@@ -1021,11 +891,5 @@ if __name__ == "__main__":
         clip_to=a.score_clip,
         specify_classes=SPECIFY_CLASSES,
     )
-
-    log("plotting class average distributions")
-    plot_class_distributions(a.out_dir, class_avgs, specify_classes=SPECIFY_CLASSES)
-
-    log("plotting correlation previews")
-    plot_corr_previews(a.out_dir, corr_data, class_names)
 
     log("done.")
