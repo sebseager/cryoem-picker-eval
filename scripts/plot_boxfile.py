@@ -11,7 +11,7 @@ from cycler import cycler
 from coord_converter import process_conversion
 import matplotlib  # we import pyplot later
 from jaccard import maxbpt
-from consts import *
+from common import *
 
 matplotlib.rcParams["axes.prop_cycle"] = cycler(color=[GT_COLOR] + PICKER_COLORS)
 from matplotlib import patches

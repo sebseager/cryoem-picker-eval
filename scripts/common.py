@@ -4,6 +4,19 @@ import mrcfile
 import numpy as np
 
 
+MRC_PLOT_MARGIN = 64
+GT_COLOR = "blue"
+PICKER_COLORS = [
+    "#ff7f00",
+    "#4daf4a",
+    "#f781bf",
+    "#a65628",
+    "#984ea3",
+    "#e41a1c",
+    "#dede00",
+]
+
+
 def log(*msgs, lvl=0, quiet=False):
     """Format and print message to console with one of the following logging levels:
     0: info (print and continue execution; ignore if quiet=True)

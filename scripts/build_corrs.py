@@ -21,8 +21,7 @@ from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
 import seaborn as sns
 from coord_converter import star_to_df
-from common import log, read_mrc
-from consts import *
+from common import *
 
 SQRT_2 = math.sqrt(2)
 FFT_MODE = "same"
