@@ -15,6 +15,10 @@ PICKER_COLORS = [
     "#e41a1c",
     "#dede00",
 ]
+FILE_MATCHING_NAME = "file_matches.tsv"
+MRC_EXTS = [".mrc", ".mrcs"]
+BOXFILE_EXTS = [".box", ".star", ".tsv", ".coord"]
+TSV_SEP = "\t"
 
 
 def log(*msgs, lvl=0, quiet=False):

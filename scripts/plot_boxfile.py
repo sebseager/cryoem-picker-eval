@@ -10,7 +10,7 @@ from datetime import datetime
 from cycler import cycler
 from coord_converter import process_conversion
 import matplotlib  # we import pyplot later
-from jaccard import maxbpt
+from write_jaccard import maxbpt
 from common import *
 
 matplotlib.rcParams["axes.prop_cycle"] = cycler(color=[GT_COLOR] + PICKER_COLORS)
