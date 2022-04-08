@@ -33,7 +33,7 @@ def read_class_avgs(mrcs_paths, n_max_classes=None):
     for m in mrcs_paths:
         mrcs = read_mrc(m, mmap=True)
         n_cls = len(mrcs) if n_max_classes is None else min(n_max_classes, len(mrcs))
-        class_avgs[Path(m).stem] = mrcs[:n_cls]
+        class_avgs[norm_path(m).stem] = mrcs[:n_cls]
 
     return class_avgs
 
@@ -304,10 +304,10 @@ if __name__ == "__main__":
     # validation and input handling
     if len(a.m) < 2:
         log("Must have at least two class average files to run correlation", lvl=2)
-    a.m = [Path(p).resolve() for p in np.atleast_1d(a.m)]
+    a.m = [norm_path(p) for p in np.atleast_1d(a.m)]
     if not all(p.is_file() for p in a.m):
         log(f"bad mrcs paths", lvl=2)
-    a.out_dir = Path(a.out_dir).resolve()
+    a.out_dir = norm_path(a.out_dir)
     if not a.out_dir.is_dir():
         os.makedirs(a.out_dir, exist_ok=True)
     if a.gt_name not in [x.stem for x in a.m]:

@@ -2,7 +2,14 @@ import sys
 import warnings
 import mrcfile
 import numpy as np
+from pathlib import Path
 
+
+Box = namedtuple("Box", ["x", "y", "w", "h", "conf"])
+Intersection = namedtuple("Intersection", ["box1", "box2", "jac"])
+
+# set defaults starting from rightmost positional arg (i.e. confidence)
+Box.__new__.__defaults__ = (0.0,)
 
 MRC_PLOT_MARGIN = 64
 GT_COLOR = "blue"
@@ -19,6 +26,11 @@ FILE_MATCHING_NAME = "file_matches.tsv"
 MRC_EXTS = [".mrc", ".mrcs"]
 BOXFILE_EXTS = [".box", ".star", ".tsv", ".coord"]
 TSV_SEP = "\t"
+
+
+def norm_path(path):
+    """Normalize path and return as a pathlib.Path object."""
+    return Path(path).expanduser().resolve()
 
 
 def log(*msgs, lvl=0, quiet=False):
