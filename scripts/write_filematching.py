@@ -2,7 +2,17 @@ import os
 import sys
 import argparse
 from pathlib import Path
+import pandas as pd
 from common import *
+
+
+def read_file_matching(out_dir):
+    """Read file matching from file as written by file_matching, and return as a
+    dictionary (where keys are file group names and values are lists of file names).
+    """
+
+    df = pd.read_csv(norm_path(out_dir) / FILE_MATCHES_NAME, sep=TSV_SEP)
+    return df.to_dict(orient="list")
 
 
 def file_matching(primary_path_key, force=False, **paths):
@@ -25,10 +35,7 @@ def file_matching(primary_path_key, force=False, **paths):
         return
 
     # normalize paths
-    paths = {
-        name: [Path(x).expanduser().resolve() for x in paths]
-        for name, paths in paths.items()
-    }
+    paths = {name: [norm_path(x) for x in paths] for name, paths in paths.items()}
 
     # let the user know what we found
     for name, paths in paths.items():
@@ -84,12 +91,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # make sure output directory exists
-    a.out_dir = Path(a.out_dir)
+    a.out_dir = norm_path(a.out_dir)
     if not a.out_dir.isdir():
         a.out_dir.mkdir()
 
     # skip if matchings file already exists
-    tsv_path = Path(a.out_dir) / FILE_MATCHING_NAME
+    tsv_path = a.out_dir / FILE_MATCHING_NAME
     if not a.force and tsv_path.exists():
         log("set force to True to overwrite existing file matches", lvl=2)
         exit(1)
