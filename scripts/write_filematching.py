@@ -6,16 +6,7 @@ import pandas as pd
 from common import *
 
 
-def read_file_matching(out_dir):
-    """Read file matching from file as written by file_matching, and return as a
-    dictionary (where keys are file group names and values are lists of file names).
-    """
-
-    df = pd.read_csv(norm_path(out_dir) / FILE_MATCHES_NAME, sep=TSV_SEP)
-    return df.to_dict(orient="list")
-
-
-def file_matching(primary_path_key, force=False, **paths):
+def file_matching(primary_path_key, **paths):
     """Make name-based file matches. File paths are provided as keyword arguments,
     where the key is the name of a group of files and the value is those paths as a
     list (e.g., mrc=[path1, path2, ...], gt=[...], picker1=[...], ...). Specify the
@@ -59,6 +50,15 @@ def file_matching(primary_path_key, force=False, **paths):
 
     log(f"matched {len(match_df)} micrographs")
     return match_groups
+
+
+def read_file_matching(out_dir):
+    """Read file matching from file as written by file_matching, and return as a
+    dictionary (where keys are file group names and values are lists of file names).
+    """
+
+    df = pd.read_csv(norm_path(out_dir) / FILE_MATCHES_NAME, sep=TSV_SEP)
+    return df.to_dict(orient="list")
 
 
 if __name__ == "__main__":
@@ -110,8 +110,12 @@ if __name__ == "__main__":
         if current_key:
             paths_dict[current_key] = paths_dict.get(current_key, []) + [p]
 
-    # write matchings to tsv
-    matches = file_matching(a.primary_path_key, force=a.force, **paths_dict)
+    # write matchings to tsv (mode "x" raises an error if file already exists)
+    matches = file_matching(a.primary_path_key, **paths_dict)
     match_df = pd.DataFrame(matches)
-    df.to_csv(tsv_path, sep=TSV_SEP, index=False)
+    try:
+        df.to_csv(tsv_path, sep=TSV_SEP, index=False, mode="w" if a.force else "x")
+    except FileExistsError:
+        log(f"file {tsv_path} already exists", lvl=2)
+        exit(1)
     log(f"wrote file matches to {tsv_path}")
