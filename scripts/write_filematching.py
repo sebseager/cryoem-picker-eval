@@ -62,6 +62,30 @@ def read_file_matching(out_dir):
     return df.to_dict(orient="list")
 
 
+def write_file_matching(out_dir, matches, force=False):
+    """Write file matching (as returned by file_matching) to file."""
+
+    # make sure output directory exists
+    out_dir = norm_path(out_dir)
+    if not out_dir.isdir():
+        out_dir.mkdir()
+
+    # skip if matchings file already exists
+    tsv_path = out_dir / FILE_MATCHING_NAME
+    if not force and tsv_path.exists():
+        log("set force to True to overwrite existing file matches", lvl=2)
+        exit(1)
+
+    # write matchings to tsv (mode "x" raises an error if file already exists)
+    df = pd.DataFrame(matches)
+    try:
+        df.to_csv(tsv_path, sep=TSV_SEP, index=False, mode="w" if force else "x")
+    except FileExistsError:
+        log(f"file {tsv_path} already exists", lvl=2)
+        exit(1)
+    log(f"wrote file matches to {tsv_path}")
+
+
 def read_boxfiles(file_matches, mrc_key="mrc"):
     """Provided lists of box file paths (must follow the EMAN box file format, with
     columns: x, y, width, height, confidence) as returned by file_matching, load all
@@ -119,17 +143,6 @@ if __name__ == "__main__":
         parser.print_help(sys.stderr)
         sys.exit(1)
 
-    # make sure output directory exists
-    a.out_dir = norm_path(a.out_dir)
-    if not a.out_dir.isdir():
-        a.out_dir.mkdir()
-
-    # skip if matchings file already exists
-    tsv_path = a.out_dir / FILE_MATCHING_NAME
-    if not a.force and tsv_path.exists():
-        log("set force to True to overwrite existing file matches", lvl=2)
-        exit(1)
-
     paths_dict = {}
     current_key = None
     for p in paths:
@@ -139,12 +152,5 @@ if __name__ == "__main__":
         if current_key:
             paths_dict[current_key] = paths_dict.get(current_key, []) + [p]
 
-    # write matchings to tsv (mode "x" raises an error if file already exists)
     matches = file_matching(a.primary_key, **paths_dict)
-    match_df = pd.DataFrame(matches)
-    try:
-        df.to_csv(tsv_path, sep=TSV_SEP, index=False, mode="w" if a.force else "x")
-    except FileExistsError:
-        log(f"file {tsv_path} already exists", lvl=2)
-        exit(1)
-    log(f"wrote file matches to {tsv_path}")
+    write_file_matching(a.out_dir, matches, force=a.force)
