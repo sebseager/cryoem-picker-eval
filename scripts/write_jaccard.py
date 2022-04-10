@@ -1,20 +1,15 @@
+import argparse
 import numpy as np
 from collections import namedtuple
 from scipy.optimize import linear_sum_assignment
-
-
-Box = namedtuple("Box", ["x", "y", "w", "h", "conf"])
-Intersection = namedtuple("Intersection", ["box1", "box2", "jac"])
-
-# set defaults starting from rightmost positional arg (i.e. confidence)
-Box.__new__.__defaults__ = (0.0,)
+from sklearn.metrics._ranking import _binary_clf_curve
+from common import *
 
 
 def jaccard(box1, box2):
-    """
-    Jaccard index (intersection-over-union) min-max algorithm. Finds intersection of two rectangles by combining
-    the rightmost of the two left edges, bottommost of the top edges, topmost of the bottom edges, and leftmost
-    of the right edges.
+    """Jaccard index (intersection-over-union) min-max algorithm. Finds intersection
+    of two rectangles by combining the rightmost of the two left edges, bottommost of
+    the top edges, topmost of the bottom edges, and leftmost of the right edges.
     """
 
     box1_xmin = box1.x
@@ -46,8 +41,7 @@ def jaccard(box1, box2):
 
 
 def box_intersects(box, box_list, max_only=True, reverse_box_order=False):
-    """
-    Get a box's intersections (or max intersection only, if max_only is True) with
+    """Get a box's intersections (or max intersection only, if max_only is True) with
     a box list. If reverse_box_order is True, put make `box` the second member of
     returned Intersections.
     """
@@ -67,12 +61,46 @@ def box_intersects(box, box_list, max_only=True, reverse_box_order=False):
     return res
 
 
-def maxbpt(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
+def many_one_matching(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
+    """Give each box in pckr_boxes its best pairing in gt_boxes, and allow many-to-one
+    gt-to-pckr pairings (i.e. don't remove anything and allow reuse of boxes from the
+    ground truth set). Iterating over gt_boxes instead would measure the "goodness"
+    of the ground truth set (not desired here).
+
+    Args:
+        gt_boxes (list):  List of ground truth boxes
+        pckr_boxes (list): List of particle picker boxes
+        conf_rng (tuple, optional): Tuple of length 2, representing minimum and maximum
+            confidences (between 0 and 1), inclusive, within which a box will be
+            returned in intersections list. Defaults to (0, 1).
+
+    Returns:
+        list: List of Intersection namedtuples. If an intersection with gt_boxes is
+            not found for a particular pckr_box, an Intersection with
+            Box(None, None, None, None, None) as box1 will be returned.
     """
-    Uses scipy implementation of Hungarian (Kuhn-Munkres) maximum bipartite matching
+
+    intersections = []
+    for pckr_box in pckr_boxes:
+        pckr_box_max_intersection = max_box_intersection(
+            pckr_box, gt_boxes, reverse_box_order=True
+        )
+        if pckr_box_max_intersection is not None:
+            if conf_rng[0] <= pckr_box.conf <= conf_rng[1]:
+                intersections.append(pckr_box_max_intersection)
+        else:
+            intersections.append(
+                Intersection(Box(None, None, None, None, None), pckr_box, jac=0)
+            )
+
+    return intersections
+
+
+def maxbpt_matching(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
+    """Uses scipy implementation of Hungarian (Kuhn-Munkres) maximum bipartite matching
     algorithm to find a perfect matching, maximizing edge weights (Jaccard indices,
-    here) and number of connections. Same as nx.minimum_weight_full_matching
-    (docs: "this implementation defers the calculation of the assignment to SciPy").
+    here) and number of connections. Same as nx.minimum_weight_full_matching (docs:
+    "this implementation defers the calculation of the assignment to SciPy").
     Note that, since this is a maximum matching, some non-overlapping gt_ and
     pckr_boxes may be paired to satisfy constraints of the algorithm; these can be
     identified by a Jaccard of exactly 0.
@@ -115,3 +143,115 @@ def maxbpt(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
     ]
 
     return intersections
+
+
+def jac_table(
+    boxes,
+    matching_func,
+    gt_key="gt",
+    box_precision=0,
+    conf_precision=2,
+    jac_precision=3,
+    **matching_kwargs,
+):
+    """Generate a single table of ground-truth-to-picker boxfile matches, using the
+    matching strategy provided by matching_func. Additional keyword arguments for
+    the matching function can be passed in via matching_kwargs.
+
+    Args:
+        boxes (dict): Dictionary of Box objects, as returned by read_boxfiles.
+        matching_func (function): Function that takes two lists of Box objects
+            and returns a list of Intersection objects. Provide optional keyword
+            arguments to this function via matching_kwargs.
+        gt_key (str, optional): They key in boxes to use as the ground truth set.
+            Defaults to "gt".
+        box_precision (int, optional): Number of decimal places to round box
+            coordinates and dimensions to. Set to None to do no rounding. Defaults to 0.
+        conf_precision (int, optional): Number of decimal places to round confidence
+            to. Set to None to do no rounding. Defaults to 2.
+        jac_precision (int, optional): Number of decimal places to round Jaccard
+            indices to. Set to None to do no rounding. Defaults to 3.
+
+    Returns:
+        dict: Dictionary with the following structure:
+            {
+                "mrc": [path1, path2, ...],
+                "gt": [box1, box2, ...],
+                "picker1": [(box1, jaccard_overlap1), ...]
+            },
+            in which corresponding list indices (i.e., each "row") indicate each
+            picker's match for a given ground truth. If a picker list contains None at
+            some index, it means that the picker did not have a matched box for the
+            ground truth at that index. If the ground truth list contains None at some
+            index, it means that there is no correlation between any picker boxes at
+            that index (i.e., picker boxes not matched with any ground truth).
+    """
+
+    # table is a dict keyed by (mrc_path, gt_box) pairs, with
+    # {"picker1": box1, "picker2": box2, ...} dicts as values
+    table = {}
+    pickers = list(set(boxes.keys()) - set(gt_key))
+
+    try:
+        mrc_paths = list(boxes[gt_key].keys())
+    except KeyError:
+        log("gt_key not found in boxes", 2)
+        return
+
+    # helper function to round a box, jac pair to the provided precision
+    def round_if_needed(box, jac):
+        round_jac = jac_precision is not None
+        new_box = []
+        for attr in ("x", "y", "w", "h", "conf"):
+            val = getattr(box, attr)
+            do_round, precision = (
+                (conf_precision is not None, conf_precision)
+                if attr == "conf"
+                else (box_precision is not None, box_precision)
+            )
+            try:
+                if not do_round:
+                    raise TypeError  # abuse TypeError to skip rounding
+                if precision == 0:
+                    new_box.append(int(round(val, precision)))
+                else:
+                    new_box.append(round(val, precision))
+            except TypeError:  # avoid rounding None
+                new_box.append(val)
+        try:
+            new_jac = round(jac, jac_precision) if jac_precision is not None else jac
+        except TypeError:  # avoid rounding None
+            new_jac = jac
+        return Box(*new_box), new_jac
+
+    # add all boxes to matching table
+    for mrc in mrc_paths:
+        for picker in pickers:
+            gt_boxes = boxes[gt_key][mrc]
+            pckr_boxes = boxes[picker][mrc]
+            matches = matching_func(gt_boxes, pckr_boxes, **matching_kwargs)
+            for match in matches:
+                key = (mrc, match.box1)
+                try:
+                    # if there's already a Box here, something's gone very wrong
+                    # and we may have a duplicate of the key (mrc, match.box1)
+                    assert table[key][picker] is None
+                    table[key][picker] = round_if_needed(match.box2, match.jac)
+                except KeyError:
+                    # set the default for this key to a dict of Nones
+                    table[key] = {p: None for p in pickers}
+
+    # rearrange matching table into the return format:
+    # {"mrc": [path1, ...], "gt": [box1, ...], "picker1": [box1, ...]},
+    flat_table = {"mrc": [], "gt": []} + {p: [] for p in pickers}
+    for (mrc, gt_box), picker_boxes in table.items():
+        flat_table["mrc"].append(mrc)
+        flat_table["gt"].append(gt_box)
+        for picker, (box, jac) in picker_boxes.items():
+            flat_table[picker].append((box, jac))
+
+    return flat_table
+
+
+if __name__ == "__main__":
+    pass
