@@ -150,12 +150,12 @@ def tsv_to_df(path):
 # writing
 
 
-def df_to_star(df, out_path, do_force=False):
+def df_to_star(df, out_path, force=False):
     """Write df generated from one of the *_to_df methods in this module out to file
     with appropriate STAR header prepended.
     """
 
-    if do_force:
+    if force:
         _make_parent_dir(out_path)
     else:
         if _path_occupied(out_path):
@@ -178,12 +178,12 @@ def df_to_star(df, out_path, do_force=False):
     df.to_csv(out_path, header=False, sep="\t", index=False, mode="a")
 
 
-def df_to_tsv(df, col_order, out_path, include_header=False, do_force=False):
+def df_to_tsv(df, col_order, out_path, include_header=False, force=False):
     """Write df generated from one of the *_to_df methods in this module out to file,
     optionally writing out [x, y, w, h, conf] labels as a header.
     """
 
-    if do_force:
+    if force:
         _make_parent_dir(out_path)
     else:
         if _path_occupied(out_path):
@@ -209,7 +209,8 @@ def process_conversion(
     single_out=False,
     multi_out=False,
     round_to=None,
-    do_force=False,
+    require_conf=None,
+    force=False,
     quiet=False,
 ):
 
@@ -258,7 +259,6 @@ def process_conversion(
             else:
                 if cur_name in df.columns:
                     rename_dict[cur_name] = new_name
-
         df = df.rename(columns=rename_dict)
 
         # modify coordinates for output format if needed
@@ -291,6 +291,9 @@ def process_conversion(
             _log(f"unexpected type in input columns ({e})", lvl=2)
         except ValueError as e:
             _log(f"unexpected value in input columns ({e})", lvl=2)
+
+        if require_conf is not None and "conf" not in df.columns:
+            df["conf"] = float(require_conf)
 
         if out_fmt in ("star", "tsv"):
             out_cols = ["x", "y", "conf", "name"]
@@ -334,7 +337,7 @@ def process_conversion(
         out_path = parent / out_file
 
         if out_fmt == "star":
-            df_to_star(df, out_path, do_force=do_force)
+            df_to_star(df, out_path, force=force)
         elif out_fmt in ("box", "tsv"):
             _log(f"using the following output column order:", quiet=quiet)
             _log(f"{out_col_order}", quiet=quiet)
@@ -343,7 +346,7 @@ def process_conversion(
                 out_col_order,
                 out_path,
                 include_header=include_header,
-                do_force=do_force,
+                force=force,
             )
 
         _log(f"wrote to {out_path}", quiet=quiet)
@@ -431,6 +434,13 @@ if __name__ == "__main__":
         "(don't round by default)",
     )
     parser.add_argument(
+        "--require_conf",
+        default=None,
+        type=float,
+        help="Supply a decimal confidence value to fill any missing confidences in "
+        "the output (default: don't fill in missing confidences)",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Allow files in output directory to be overwritten and make output "
@@ -468,7 +478,8 @@ if __name__ == "__main__":
         single_out=a.single_out,
         multi_out=a.multi_out,
         round_to=a.round,
-        do_force=a.force,
+        require_conf=a.require_conf,
+        force=a.force,
         quiet=a.quiet,
     )
 
