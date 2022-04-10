@@ -3,6 +3,7 @@ import sys
 import argparse
 from pathlib import Path
 import pandas as pd
+from coord_converter import tsv_to_df
 from common import *
 
 
@@ -59,6 +60,34 @@ def read_file_matching(out_dir):
 
     df = pd.read_csv(norm_path(out_dir) / FILE_MATCHES_NAME, sep=TSV_SEP)
     return df.to_dict(orient="list")
+
+
+def read_boxfiles(file_matches, mrc_key="mrc"):
+    """Provided lists of box file paths (must follow the EMAN box file format, with
+    columns: x, y, width, height, confidence) as returned by file_matching, load all
+    boxes into a dictionary with the following structure:
+    {picker_name: {mrc_path: [box1, box2, ...]}}.
+    """
+
+    boxes = {}
+    for name, paths in file_matches.items():
+        if name == mrc_key:
+            continue
+        boxes[name] = {}
+        for mrc_path, boxfile_path in zip(file_matches[mrc_key], paths):
+            df = tsv_to_df(boxfile_path)
+            try:
+                # Box._fields = ['x', 'y', 'w', 'h', 'conf']
+                new_boxes = [Box(*row) for row in df[list(Box._fields)].values]
+            except KeyError as e:
+                log(f"box file does not have all required columns ({f})", lvl=2)
+                return
+            try:
+                boxes[name][mrc_path].append(new_boxes)
+            except KeyError:
+                boxes[name][mrc_path] = [new_boxes]
+
+    return boxes
 
 
 if __name__ == "__main__":
