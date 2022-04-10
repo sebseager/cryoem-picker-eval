@@ -3,6 +3,7 @@ import warnings
 import mrcfile
 import numpy as np
 from pathlib import Path
+from collections import namedtuple
 
 
 Box = namedtuple("Box", ["x", "y", "w", "h", "conf"])
@@ -22,10 +23,10 @@ PICKER_COLORS = [
     "#e41a1c",
     "#dede00",
 ]
-FILE_MATCHING_NAME = "file_matches.tsv"
 MRC_EXTS = [".mrc", ".mrcs"]
-BOXFILE_EXTS = [".box", ".star", ".tsv", ".coord"]
+BOXFILE_EXTS = [".box", ".cbox", ".star", ".tsv", ".coord"]
 TSV_SEP = "\t"
+FILE_MATCHING_NAME = "file_matches.tsv"
 
 
 def norm_path(path):
