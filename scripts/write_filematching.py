@@ -65,7 +65,7 @@ def read_file_matching(out_dir):
 def read_boxfiles(file_matches, mrc_key="mrc"):
     """Provided lists of box file paths (must follow the EMAN box file format, with
     columns: x, y, width, height, confidence) as returned by file_matching, load all
-    boxes into a dictionary with the following structure:
+    boxes into a dictionary of Box objects with the following structure:
     {picker_name: {mrc_path: [box1, box2, ...]}}.
     """
 
@@ -95,14 +95,14 @@ if __name__ == "__main__":
         description="This script matches named file groups by common file name to "
         "a given 'primary' path set. In addition to the provided arguments, specify "
         "file path groups by adding your own keyword arguments. For example: "
-        f"{Path(__file__).name} out/dir --primary_path_key mrc "
+        f"{Path(__file__).name} out_dir/ --primary_path_key mrc "
         "--mrc path1 path2 ... --gt ... --picker1 ..."
     )
     parser.add_argument(
         "out_dir", help="Output directory (will be created if it does not exist)"
     )
     parser.add_argument(
-        "--primary_path_key",
+        "--primary_key",
         help="Name of file group against which to match",
         required=True,
     )
@@ -140,7 +140,7 @@ if __name__ == "__main__":
             paths_dict[current_key] = paths_dict.get(current_key, []) + [p]
 
     # write matchings to tsv (mode "x" raises an error if file already exists)
-    matches = file_matching(a.primary_path_key, **paths_dict)
+    matches = file_matching(a.primary_key, **paths_dict)
     match_df = pd.DataFrame(matches)
     try:
         df.to_csv(tsv_path, sep=TSV_SEP, index=False, mode="w" if a.force else "x")
