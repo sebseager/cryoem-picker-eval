@@ -53,25 +53,25 @@ def file_matching(primary_path_key, **paths):
     return match_groups
 
 
-def read_file_matching(out_dir):
+def read_file_matching(path):
     """Read file matching from file as written by file_matching, and return as a
     dictionary (where keys are file group names and values are lists of file names).
     """
 
-    df = pd.read_csv(norm_path(out_dir) / FILE_MATCHES_NAME, sep=TSV_SEP)
+    df = pd.read_csv(norm_path(path), sep=TSV_SEP)
     return df.to_dict(orient="list")
 
 
-def write_file_matching(out_dir, matches, force=False):
+def write_file_matching(out_dir, matches, filename="file_matches.tsv", force=False):
     """Write file matching (as returned by file_matching) to file."""
 
     # make sure output directory exists
     out_dir = norm_path(out_dir)
     if not out_dir.isdir():
-        out_dir.mkdir()
+        out_dir.mkdir(parents=True)
 
     # skip if matchings file already exists
-    tsv_path = out_dir / FILE_MATCHING_NAME
+    tsv_path = out_dir / filename
     if not force and tsv_path.exists():
         log("set force to True to overwrite existing file matches", lvl=2)
         exit(1)
