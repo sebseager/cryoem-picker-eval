@@ -26,7 +26,6 @@ PICKER_COLORS = [
 MRC_EXTS = [".mrc", ".mrcs"]
 BOXFILE_EXTS = [".box", ".cbox", ".star", ".tsv", ".coord"]
 TSV_SEP = "\t"
-FILE_MATCHING_NAME = "file_matches.tsv"
 
 
 def norm_path(path):
