@@ -291,7 +291,7 @@ def read_jac_table(path, mrc_key="mrc", gt_key="gt"):
         except KeyError as e:
             log(f"expected columns not found in table for '{picker}': {e}", lvl=2)
             continue
-    
+
     return table
 
 
@@ -367,21 +367,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--box_precision",
         help="Number of decimal places to round box coordinates and dimensions to. "
-        "Don't round by default.",
-        default=None,
+        "Defaults to 0.",
+        default=0,
         type=int,
     )
     parser.add_argument(
         "--conf_precision",
-        help="Number of decimal places to round confidence values to. "
-        "Don't round by default.",
-        default=None,
+        help="Number of decimal places to round confidence values to. Defaults to 3.",
+        default=3,
         type=int,
     )
     parser.add_argument(
         "--jac_precision",
-        help="Number of decimal places to round Jaccard indices to. "
-        "Don't round by default.",
+        help="Number of decimal places to round Jaccard indices to. Defaults to 2.",
+        default=2,
+        type=int,
     )
     parser.add_argument(
         "--gt_key",
