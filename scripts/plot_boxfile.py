@@ -10,7 +10,7 @@ from datetime import datetime
 from cycler import cycler
 from coord_converter import process_conversion
 import matplotlib  # we import pyplot later
-from write_jaccard import maxbpt
+from write_jaccard import maxbpt_matching
 from common import *
 
 matplotlib.rcParams["axes.prop_cycle"] = cycler(color=[GT_COLOR] + PICKER_COLORS)
@@ -329,7 +329,7 @@ if __name__ == "__main__":
         _log("computing maximum bipartite matches")
         gt = boxes["gt"][0]
         gt = random.sample(gt, len(gt))[: a.num_gt]
-        ixns_list = [maxbpt(gt, p) for p in boxes["pckr"]]
+        ixns_list = [maxbpt_matching(gt, p) for p in boxes["pckr"]]
         box_lists = [gt] + [[ixn.box2 for ixn in ixns] for ixns in ixns_list]
 
     # load mrc
