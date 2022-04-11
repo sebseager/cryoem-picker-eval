@@ -71,19 +71,19 @@ def write_file_matching(out_dir, matches, filename="file_matches.tsv", force=Fal
         out_dir.mkdir(parents=True)
 
     # skip if matchings file already exists
-    tsv_path = out_dir / filename
-    if not force and tsv_path.exists():
+    out_path = out_dir / filename
+    if not force and out_path.exists():
         log("set force to True to overwrite existing file matches", lvl=2)
         exit(1)
 
     # write matchings to tsv (mode "x" raises an error if file already exists)
     df = pd.DataFrame(matches)
     try:
-        df.to_csv(tsv_path, sep=TSV_SEP, index=False, mode="w" if force else "x")
+        df.to_csv(out_path, sep=TSV_SEP, index=False, mode="w" if force else "x")
     except FileExistsError:
-        log(f"file {tsv_path} already exists", lvl=2)
+        log(f"file {out_path} already exists", lvl=2)
         exit(1)
-    log(f"wrote file matches to {tsv_path}")
+    log(f"wrote file matches to {out_path}")
 
 
 def read_boxfiles(file_matches, mrc_key="mrc"):
