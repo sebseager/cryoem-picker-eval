@@ -62,8 +62,8 @@ def box_intersects(box, box_list, max_only=True, reverse_box_order=False):
     return res
 
 
-def many_one_matching(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
-    """Give each box in pckr_boxes its best pairing in gt_boxes, and allow many-to-one
+def one_many_matching(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
+    """Give each box in pckr_boxes its best pairing in gt_boxes, and allow one-to-many
     gt-to-pckr pairings (i.e. don't remove anything and allow reuse of boxes from the
     ground truth set). Iterating over gt_boxes instead would measure the "goodness"
     of the ground truth set (not desired here).
@@ -178,7 +178,7 @@ def jac_table(
             {
                 "mrc": [path1, path2, ...],
                 "gt": [box1, box2, ...],
-                "picker1": [(box1, jaccard_overlap1), ...]
+                "picker1": [[(box1, jaccard_overlap1)], ...]
             },
             in which corresponding list indices (i.e., each "row") indicate each
             picker's match for a given ground truth. If a picker list contains None at
@@ -200,8 +200,7 @@ def jac_table(
         return
 
     # helper function to round a box, jac pair to the provided precision
-    def round_if_needed(box, jac):
-        round_jac = jac_precision is not None
+    def round_vals(box, jac):
         new_box = []
         for attr in ("x", "y", "w", "h", "conf"):
             val = getattr(box, attr)
@@ -232,24 +231,27 @@ def jac_table(
             pckr_boxes = boxes[picker][mrc]
             matches = matching_func(gt_boxes, pckr_boxes, **matching_kwargs)
             for match in matches:
-                key = (mrc, match.box1)
+                key = (mrc, match.box1)  # key by micrograph/ground-truth pair
+                val = round_vals(match.box2, match.jac)  # picker box/jaccard index pair
                 try:
-                    # if there's already a Box here, something's gone very wrong
-                    # and we may have a duplicate of the key (mrc, match.box1)
-                    assert table[key][picker] is None
-                    table[key][picker] = round_if_needed(match.box2, match.jac)
+                    # instead of storing the value by itself at this location, store
+                    # it in a list of pairs; depending on the matching function, it
+                    # may be possible for the same key to refer to multiple picker
+                    # boxes
+                    table[key][picker].append(val)
                 except KeyError:
-                    # set the default for this key to a dict of Nones
-                    table[key] = {p: None for p in pickers}
+                    # set the default for this key to a dict of empty lists
+                    table[key] = {p: [] for p in pickers}
+                    table[key][picker] = [val]
 
     # rearrange matching table into the return format:
-    # {"mrc": [path1, ...], "gt": [box1, ...], "picker1": [box1, ...]},
+    # {"mrc": [path1, ...], "gt": [box1, ...], "picker1": [[(box1, jac1)], ...]},
     flat_table = {"mrc": [], "gt": []} + {p: [] for p in pickers}
     for (mrc, gt_box), picker_boxes in table.items():
         flat_table["mrc"].append(mrc)
         flat_table["gt"].append(gt_box)
-        for picker, (box, jac) in picker_boxes.items():
-            flat_table[picker].append((box, jac))
+        for picker, box_jac_pair_list in picker_boxes.items():
+            flat_table[picker].append(box_jac_pair_list)
 
     return flat_table
 
@@ -334,7 +336,7 @@ def write_jac_table(out_dir, table, filename, mrc_key="mrc", gt_key="gt", force=
 
 if __name__ == "__main__":
     # each of these should match a function named *_matching in this file
-    matching_func_names = ["many_one", "maxbpt"]
+    matching_func_names = ["one_many", "maxbpt"]
 
     parser = argparse.ArgumentParser(
         description="Generate a table of matches between ground truth and picker "
