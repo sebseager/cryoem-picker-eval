@@ -116,8 +116,7 @@ def fpconsensus_table(
         one_many_table[k] = np.array(v, dtype=object)
 
     for mrc in tqdm(unique_mrcs):
-        # build a dict of box lists, keyed by picker name:
-        # {picker1: [box1, box2, ...], picker2: [box1, box2, ...], ...}
+        # build a dict of box lists, keyed by picker name
         box_lists = {}
         mrc_indices = np.where(one_many_table[mrc_key] == mrc)[0]
         for picker in pickers:
