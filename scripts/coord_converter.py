@@ -209,6 +209,7 @@ def process_conversion(
     single_out=False,
     multi_out=False,
     round_to=None,
+    norm_conf=None,
     require_conf=None,
     force=False,
     quiet=False,
@@ -291,6 +292,20 @@ def process_conversion(
             _log(f"unexpected type in input columns ({e})", lvl=2)
         except ValueError as e:
             _log(f"unexpected value in input columns ({e})", lvl=2)
+
+        if norm_conf is not None and "conf" in df.columns:
+            old_max, old_min = df["conf"].max(), df["conf"].min()
+            new_min, new_max = norm_conf
+            old_range, new_range = old_max - old_min, new_max - new_min
+            if old_min <= new_min or old_max > new_max:
+                if old_range == 0:
+                    # if the old range was 0, arbitrarily set everything to new_min
+                    df["conf"] = new_min
+                else:
+                    # otherwise do linear normalization
+                    df["conf"] = (
+                        (df["conf"] - old_min) * new_range / old_range
+                    ) + new_min
 
         if require_conf is not None and "conf" not in df.columns:
             df["conf"] = float(require_conf)
@@ -430,15 +445,23 @@ if __name__ == "__main__":
         "--round",
         default=None,
         type=int,
-        help="Round coordinates to the specified number of decimal places "
-        "(don't round by default)",
+        help="Round coordinates to the specified number of decimal places. "
+        "Don't round by default.",
     )
     parser.add_argument(
         "--require_conf",
         default=None,
         type=float,
         help="Supply a decimal confidence value to fill any missing confidences in "
-        "the output (default: don't fill in missing confidences)",
+        "the output. Don't fill in missing confidences by default.",
+    )
+    parser.add_argument(
+        "--norm_conf",
+        default=None,
+        type=float,
+        nargs=2,
+        help="If confidence values exceed the provided range, normalize them to that "
+        "range (e.g. [0, 1]). No normalization is done by default.",
     )
     parser.add_argument(
         "--force",
@@ -478,6 +501,7 @@ if __name__ == "__main__":
         single_out=a.single_out,
         multi_out=a.multi_out,
         round_to=a.round,
+        norm_conf=a.norm_conf,
         require_conf=a.require_conf,
         force=a.force,
         quiet=a.quiet,
