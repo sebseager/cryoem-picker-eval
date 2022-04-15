@@ -101,12 +101,12 @@ def read_boxfiles(file_matches, mrc_key="mrc"):
             continue
         boxes[name] = {}
         for mrc_path, boxfile_path in zip(file_matches[mrc_key], paths):
-            df = tsv_to_df(boxfile_path)
+            df = tsv_to_df(boxfile_path, header_mode="infer")
             try:
                 # Box._fields = ['x', 'y', 'w', 'h', 'conf']
                 new_boxes = [Box(*row) for row in df[list(Box._fields)].values]
             except KeyError as e:
-                log(f"box file does not have all required columns ({f})", lvl=2)
+                log(f"box file does not have all required columns ({e})", lvl=2)
                 return
             try:
                 boxes[name][mrc_path].append(new_boxes)

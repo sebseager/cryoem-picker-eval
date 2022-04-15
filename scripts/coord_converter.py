@@ -123,26 +123,40 @@ def star_to_df(path):
     return df
 
 
-def tsv_to_df(path):
+def tsv_to_df(path, header_mode=None):
     """Generate a dataframe from the TSV-like file at the specified path, skipping
     any non-numeric header rows.
+
+    Args:
+        path (str): Path to TSV-like file
+        header_mode (str): One of None, "infer" or an int (row index). If None, any
+            non-numeric rows at the top of the file are skipped and column names
+            are not set. Otherwise, manual column skipping is not performed, and
+            header_mode is passed directly to the header argument of pandas.read_csv.
     """
 
-    header_line_count = 0  # file line index where data starts
+    if header_mode is None:
+        header_line_count = 0  # file line index where data starts
+        with open(path, mode="r") as f:
+            for i, line in enumerate(f):
+                if _has_numbers(line):
+                    header_line_count = i
+                    break
 
-    with open(path, mode="r") as f:
-        for i, line in enumerate(f):
-            if _has_numbers(line):
-                header_line_count = i
-                break
-
-    df = pd.read_csv(
-        path,
-        delim_whitespace=True,
-        header=None,
-        skip_blank_lines=True,
-        skiprows=header_line_count,
-    )
+        df = pd.read_csv(
+            path,
+            delim_whitespace=True,
+            header=None,
+            skip_blank_lines=True,
+            skiprows=header_line_count,
+        )
+    else:
+        df = pd.read_csv(
+            path,
+            delim_whitespace=True,
+            header=header_mode,
+            skip_blank_lines=True,
+        )
 
     return df
 
