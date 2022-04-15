@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 from collections import namedtuple
 import pickle
+from tqdm import tqdm
 from scipy.optimize import linear_sum_assignment
 from sklearn.metrics._ranking import _binary_clf_curve
 from common import *
@@ -63,7 +64,7 @@ def box_intersects(box, box_list, max_only=True, reverse_box_order=False):
     return res
 
 
-def one_many_matching(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
+def one_many_matching(gt_boxes, pckr_boxes, conf_range=(0, 1), **unused_kwargs):
     """Give each box in pckr_boxes its best pairing in gt_boxes, and allow one-to-many
     gt-to-pckr pairings (i.e. don't remove anything and allow reuse of boxes from the
     ground truth set). Iterating over gt_boxes instead would measure the "goodness"
@@ -72,33 +73,31 @@ def one_many_matching(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
     Args:
         gt_boxes (list):  List of ground truth boxes
         pckr_boxes (list): List of particle picker boxes
-        conf_rng (tuple, optional): Tuple of length 2, representing minimum and maximum
-            confidences (between 0 and 1), inclusive, within which a box will be
-            returned in intersections list. Defaults to (0, 1).
+        conf_range (tuple, optional): Tuple of length 2, representing minimum and
+            maximum confidences (between 0 and 1), inclusive, within which a box
+            will be returned in intersections list. Defaults to (0, 1).
 
     Returns:
         list: List of Intersection namedtuples. If an intersection with gt_boxes is
-            not found for a particular pckr_box, an Intersection with
-            Box(None, None, None, None, None) as box1 will be returned.
+            not found for a particular pckr_box, an Intersection with None as box1
+            will be returned.
     """
 
     intersections = []
     for pckr_box in pckr_boxes:
-        pckr_box_max_intersection = max_box_intersection(
+        pckr_box_max_intersection = box_intersects(
             pckr_box, gt_boxes, reverse_box_order=True
         )
         if pckr_box_max_intersection is not None:
-            if conf_rng[0] <= pckr_box.conf <= conf_rng[1]:
+            if conf_range[0] <= pckr_box.conf <= conf_range[1]:
                 intersections.append(pckr_box_max_intersection)
         else:
-            intersections.append(
-                Intersection(Box(None, None, None, None, None), pckr_box, jac=0)
-            )
+            intersections.append(Intersection(None, pckr_box, jac=0))
 
     return intersections
 
 
-def maxbpt_matching(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
+def maxbpt_matching(gt_boxes, pckr_boxes, conf_range=(0, 1), **unused_kwargs):
     """Uses scipy implementation of Hungarian (Kuhn-Munkres) maximum bipartite matching
     algorithm to find a perfect matching, maximizing edge weights (Jaccard indices,
     here) and number of connections. Same as nx.minimum_weight_full_matching (docs:
@@ -112,7 +111,7 @@ def maxbpt_matching(gt_boxes, pckr_boxes, conf_rng=(0, 1)):
 
     for gt_box in gt_boxes:
         gt_box_jacs = [
-            jaccard(gt_box, p) if conf_rng[0] <= p.conf <= conf_rng[1] else 0
+            jaccard(gt_box, p) if conf_range[0] <= p.conf <= conf_range[1] else 0
             for p in pckr_boxes
         ]
 
@@ -182,11 +181,11 @@ def jac_table(
                 "picker1": [[(box1, jaccard_overlap1)], ...]
             },
             in which corresponding list indices (i.e., each "row") indicate each
-            picker's match for a given ground truth. If a picker list contains None at
-            some index, it means that the picker did not have a matched box for the
-            ground truth at that index. If the ground truth list contains None at some
-            index, it means that there is no correlation between any picker boxes at
-            that index (i.e., picker boxes not matched with any ground truth).
+            picker's match(es) for a given ground truth. If a picker list contains an
+            empty list at some index, it means that the picker did not have any matched
+            boxes for the ground truth at that index. For some micrograph path, any
+            picker boxes corresponding to a ground-truth value of None indicate boxes
+            that were unable to be paired with any ground-truth box.
     """
 
     # table is a dict keyed by (mrc_path, gt_box) pairs, with
@@ -226,7 +225,7 @@ def jac_table(
         return Box(*new_box), new_jac
 
     # add all boxes to matching table
-    for mrc in mrc_paths:
+    for mrc in tqdm(mrc_paths):
         for picker in pickers:
             gt_boxes = boxes[gt_key][mrc]
             pckr_boxes = boxes[picker][mrc]
@@ -247,7 +246,7 @@ def jac_table(
 
     # rearrange matching table into the return format:
     # {"mrc": [path1, ...], "gt": [box1, ...], "picker1": [[(box1, jac1)], ...]},
-    flat_table = {"mrc": [], "gt": []} + {p: [] for p in pickers}
+    flat_table = {"mrc": [], "gt": [], **{p: [] for p in pickers}}
     for (mrc, gt_box), picker_boxes in table.items():
         flat_table["mrc"].append(mrc)
         flat_table["gt"].append(gt_box)
@@ -273,7 +272,7 @@ def write_jac_table(out_dir, table, filename, force=False):
 
     # make sure output directory exists
     out_dir = norm_path(out_dir)
-    if not out_dir.isdir():
+    if not out_dir.is_dir():
         out_dir.mkdir(parents=True)
 
     # skip if matchings file already exists
@@ -318,7 +317,7 @@ if __name__ == "__main__":
         default=matching_func_names,
     )
     parser.add_argument(
-        "--conf_range",
+        "--conf_rng",
         help="Range of confidence values to consider during matching. "
         "Defaults to [0, 1].",
         nargs=2,
@@ -366,8 +365,9 @@ if __name__ == "__main__":
     file_matches = read_file_matching(a.file_matching_path)
     boxes = read_boxfiles(file_matches, mrc_key=a.mrc_key)
 
-    for method in a.methods:
-        matching_func = exec(method + "_matching")
+    for method in set(a.methods):
+        log(f"starting calculations for method '{method}'")
+        matching_func = locals()[method + "_matching"]
         table = jac_table(
             boxes,
             matching_func,
@@ -376,7 +376,7 @@ if __name__ == "__main__":
             conf_precision=a.conf_precision,
             jac_precision=a.jac_precision,
             # matching_kwargs start here
-            conf_rng=a.conf_range,
+            conf_range=a.conf_rng,
         )
         write_jac_table(
             a.out_dir,
