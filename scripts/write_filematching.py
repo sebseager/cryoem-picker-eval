@@ -109,9 +109,9 @@ def read_boxfiles(file_matches, mrc_key="mrc"):
                 log(f"box file does not have all required columns ({e})", lvl=2)
                 return
             try:
-                boxes[name][mrc_path].append(new_boxes)
+                boxes[name][mrc_path].extend(new_boxes)
             except KeyError:
-                boxes[name][mrc_path] = [new_boxes]
+                boxes[name][mrc_path] = new_boxes
 
     return boxes
 
