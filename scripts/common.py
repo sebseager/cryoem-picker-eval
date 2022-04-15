@@ -124,3 +124,19 @@ def read_mrc(path, mmap=False, with_header=False):
         return f.header, mrc
     else:
         return mrc.astype(np.float32)
+
+
+def flatten(x, keep_inmost_depth=None):
+    """Flatten the given list via recursive generator, preserving specified number of
+    inmost list dimensions (tuples are not considered lists).
+    """
+
+    if keep_inmost_depth:
+        is_list = isinstance(x[keep_inmost_depth - 1], list)
+    else:
+        is_list = isinstance(x, list)
+    if x and not is_list:
+        yield x
+    else:
+        for a in x:
+            yield from flatten(a)
