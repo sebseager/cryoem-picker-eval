@@ -140,3 +140,35 @@ def flatten(x, keep_inmost_depth=None):
     else:
         for a in x:
             yield from flatten(a)
+
+
+def read_from_pickle(path):
+    """Return the object stored in the given pickle file."""
+
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+
+def write_to_pickle(out_dir, obj, filename, force=False):
+    """Write serializable object to pickle file with filename in given directory."""
+
+    # make sure output directory exists
+    out_dir = norm_path(out_dir)
+    if not out_dir.is_dir():
+        out_dir.mkdir(parents=True)
+
+    # skip if matchings file already exists
+    out_path = out_dir / filename
+    if not force and out_path.exists():
+        log("set force to True to overwrite existing file matches", lvl=2)
+        exit(1)
+
+    # write table to pickle
+    write_mode = "wb" if force else "xb"
+    try:
+        with open(out_path, write_mode) as f:
+            pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
+        log(f"wrote file matches to {out_path}")
+    except FileExistsError:
+        log(f"file {out_path} already exists and --force is not set", lvl=2)
+        exit(1)

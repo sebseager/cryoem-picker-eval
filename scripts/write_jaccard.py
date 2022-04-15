@@ -191,7 +191,7 @@ def jac_table(
     # table is a dict keyed by (mrc_path, gt_box) pairs, with
     # {"picker1": box1, "picker2": box2, ...} dicts as values
     table = {}
-    pickers = list(set(boxes.keys()) - set(gt_key))
+    pickers = list(set(boxes.keys()) - {gt_key})
 
     try:
         mrc_paths = list(boxes[gt_key].keys())
@@ -254,42 +254,6 @@ def jac_table(
             flat_table[picker].append(box_jac_pair_list)
 
     return flat_table
-
-
-def read_jac_table(path):
-    """Read table of box matches from pickle file (will restore the same dictionary
-    structure constructed by jac_table).
-    """
-
-    with open(path, "rb") as handle:
-        table = pickle.load(handle)
-
-    return table
-
-
-def write_jac_table(out_dir, table, filename, force=False):
-    """Write Jaccard table (as returned by jac_table) to pickle file."""
-
-    # make sure output directory exists
-    out_dir = norm_path(out_dir)
-    if not out_dir.is_dir():
-        out_dir.mkdir(parents=True)
-
-    # skip if matchings file already exists
-    out_path = out_dir / filename
-    if not force and out_path.exists():
-        log("set force to True to overwrite existing file matches", lvl=2)
-        exit(1)
-
-    # write table to pickle
-    write_mode = "wb" if force else "xb"
-    try:
-        with open(out_path, write_mode) as handle:
-            pickle.dump(table, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        log(f"wrote file matches to {out_path}")
-    except FileExistsError:
-        log(f"file {out_path} already exists and --force is not set", lvl=2)
-        exit(1)
 
 
 if __name__ == "__main__":
@@ -378,7 +342,7 @@ if __name__ == "__main__":
             # matching_kwargs start here
             conf_range=a.conf_rng,
         )
-        write_jac_table(
+        write_to_pickle(
             a.out_dir,
             table,
             f"{method}_matches.pickle",
