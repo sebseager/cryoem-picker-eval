@@ -98,24 +98,24 @@ def fpconsensus_table(
     one_many_table,
     mrc_key="mrc",
     gt_key="gt",
+    min_jac_key="min_jac",
     gt_overlap_range=(0.0, 0.6),
     min_clique_agreement=0.6,
     **graph_kwargs,
 ):
 
-    clique_table = {}
     one_many_table = deepcopy(one_many_table)
     one_many_table.pop(gt_key)  # won't need GTs
     unique_mrcs = list(set(one_many_table[mrc_key]))
     pickers = list(set(one_many_table.keys()) - {mrc_key})
+
+    flat_table = {mrc_key: [], min_jac_key: [], **{p: [] for p in pickers}}
 
     # convert lists to numpy
     for k, v in one_many_table.items():
         one_many_table[k] = np.array(v, dtype=object)
 
     for mrc in tqdm(unique_mrcs):
-        clique_table[clique_size][mrc] = []
-
         # build a dict of box lists, keyed by picker name:
         # {picker1: [box1, box2, ...], picker2: [box1, box2, ...], ...}
         box_lists = {}
@@ -147,13 +147,12 @@ def fpconsensus_table(
             # only add clique if the lowest overlap between any two of its boxes
             # satisfies min_clique_agreement
             if min_jac >= min_clique_agreement:
-                entry = ({graph.nodes[b]["picker"]: b for b in clique}, min_jac)
-                clique_table[clique_size][mrc].append(entry)
+                flat_table[mrc_key].append(mrc)
+                flat_table[min_jac_key].append(min_jac)
+                for box in clique:
+                    flat_table[graph.nodes[box]["picker"]].append(box)
 
-     # TODO BELOW HERE
-    flat_table = {}
-
-    return clique_table
+    return flat_table
 
 
 if __name__ == "__main__":
