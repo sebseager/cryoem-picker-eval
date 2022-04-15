@@ -27,29 +27,31 @@ def file_matching(primary_path_key, **paths):
         return
 
     # normalize paths
-    paths = {name: [norm_path(x) for x in paths] for name, paths in paths.items()}
+    paths = {name: [norm_path(x) for x in lst] for name, lst in paths.items()}
 
     # let the user know what we found
-    for name, paths in paths.items():
-        log(f"{name}: found {len(paths)} files")
+    for name, lst in paths.items():
+        log(f"{name}: found {len(lst)} files")
 
     # find matching file groups
-    match_groups = {p: [] for p in pckr_paths}
+    match_groups = {p: [] for p in paths}
     for m_path in paths[primary_path_key]:
         m_stem = m_path.stem.lower()
         matches = {
-            name: next((p for p in paths if p.stem.lower().startswith(m_stem)), None)
-            for name, paths in enumerate(pckr_paths)
+            name: next((p for p in lst if p.stem.lower().startswith(m_stem)), None)
+            for name, lst in paths.items()
         }
         if all(matches.values()):
             for name, path in matches.items():
                 match_groups[name].append(path)
 
-    if not match_groups[match_groups.keys()[0]]:
+    n_matches = len(match_groups[list(match_groups.keys())[0]])
+
+    if not n_matches:
         log("no match groups found", lvl=1)
         return
 
-    log(f"matched {len(match_df)} micrographs")
+    log(f"matched {n_matches} micrographs")
     return match_groups
 
 
@@ -67,7 +69,7 @@ def write_file_matching(out_dir, matches, filename="file_matches.tsv", force=Fal
 
     # make sure output directory exists
     out_dir = norm_path(out_dir)
-    if not out_dir.isdir():
+    if not out_dir.is_dir():
         out_dir.mkdir(parents=True)
 
     # skip if matchings file already exists
