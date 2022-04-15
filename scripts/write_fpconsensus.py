@@ -1,8 +1,10 @@
+import argparse
 import numpy as np
 import networkx as nx
 from copy import deepcopy
 from tqdm import tqdm
 from itertools import combinations
+from datetime import datetime
 from write_jaccard import jaccard
 from common import *
 
@@ -135,26 +137,29 @@ def fpconsensus_table(
 
         # add cliques to table
         for clique in cliques:
-            min_jac = min(
+            # ignore clique if the lowest overlap between any two of its boxes
+            # is less than min_clique_agreement
+            do_skip = any(
                 [
-                    edge["weight"]
+                    edge["weight"] < min_clique_agreement
                     for u, v in combinations(clique, 2)
                     for edge in graph.get_edge_data(u, v)
                 ]
             )
 
-            # only add clique if the lowest overlap between any two of its boxes
-            # satisfies min_clique_agreement
-            if min_jac >= min_clique_agreement:
-                flat_table[mrc_key].append(mrc)
-                flat_table[min_jac_key].append(min_jac)
-                remaining_pickers = set(pickers)
-                for box in clique:
-                    picker = graph.nodes[box]["picker"]
-                    flat_table[picker].append(box)
-                    remaining_pickers.remove(picker)
-                for picker in remaining_pickers:
-                    flat_table[picker].append(None)  # ensure lists stay the same length
+            if do_skip:
+                continue
+
+            # we're ok to add this clique
+            flat_table[mrc_key].append(mrc)
+            flat_table[min_jac_key].append(min_jac)
+            remaining_pickers = set(pickers)
+            for box in clique:
+                picker = graph.nodes[box]["picker"]
+                flat_table[picker].append(box)
+                remaining_pickers.remove(picker)
+            for picker in remaining_pickers:
+                flat_table[picker].append(None)  # ensure lists stay the same length
 
     return flat_table
 
@@ -223,7 +228,7 @@ if __name__ == "__main__":
 
     a = parser.parse_args()
 
-    matches = pd.read_csv(norm_path(a.one_many_matches_path))
+    matches = read_from_pickle(a.one_many_matches_path)
 
     for clique_size in a.k:
         table = fpconsensus_table(
@@ -237,3 +242,12 @@ if __name__ == "__main__":
             clique_size=a.k,
             conf_range=a.conf_range,
         )
+
+        # since this takes a while to process, make sure we write to disk
+        a.out_dir = norm_path(a.out_dir)
+        filename, ext = f"fpcliques_{clique_size}", ".pickle"
+        if (a.out_dir / (filename + ext)).is_file():
+            print(f"filename {filename} already exists; appending current time string")
+            filename += datetime.now().strftime("_%y%m%d%H%M%S")
+
+        write_to_pickle(a.out_dir, table, filename + ext)

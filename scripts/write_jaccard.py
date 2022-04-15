@@ -1,7 +1,6 @@
 import argparse
 import numpy as np
 from collections import namedtuple
-import pickle
 from tqdm import tqdm
 from scipy.optimize import linear_sum_assignment
 from sklearn.metrics._ranking import _binary_clf_curve
