@@ -149,8 +149,13 @@ def fpconsensus_table(
             if min_jac >= min_clique_agreement:
                 flat_table[mrc_key].append(mrc)
                 flat_table[min_jac_key].append(min_jac)
+                remaining_pickers = set(pickers)
                 for box in clique:
-                    flat_table[graph.nodes[box]["picker"]].append(box)
+                    picker = graph.nodes[box]["picker"]
+                    flat_table[picker].append(box)
+                    remaining_pickers.remove(picker)
+                for picker in remaining_pickers:
+                    flat_table[picker].append(None)  # ensure lists stay the same length
 
     return flat_table
 
