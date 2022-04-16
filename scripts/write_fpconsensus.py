@@ -69,8 +69,12 @@ def kpartite_cliques(graph, clique_size=3, **unused_kwargs):
     """
 
     def accept_clique(clique):
-        # there must be k nodes from k different pickers in the clique
-        if len(set([graph.nodes[v]["picker"] for v in clique])) != clique_size:
+        # clique must be of length clique_size
+        if len(clique) != clique_size:
+            return False
+
+        # there must be no duplicate pickers in the clique
+        if len(set([graph.nodes[b]["picker"] for b in clique])) != clique_size:
             return False
 
         return True
@@ -225,11 +229,12 @@ if __name__ == "__main__":
             conf_range=a.conf_range,
         )
 
-        # since this takes a while to process, make sure we write to disk
+        # since this takes a while to process, make sure we always write to disk
+        # resolve filename conflicts by appending datetime string
         a.out_dir = norm_path(a.out_dir)
         filename, ext = f"fpcliques_{clique_size}", ".pickle"
         if (a.out_dir / (filename + ext)).is_file():
-            print(f"filename {filename} already exists; appending current time string")
+            print(f"filename {filename} already exists; appending current date string")
             filename += datetime.now().strftime("_%y%m%d%H%M%S")
 
         write_to_pickle(a.out_dir, table, filename + ext)
