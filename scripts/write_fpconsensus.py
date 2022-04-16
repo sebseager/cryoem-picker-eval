@@ -69,11 +69,7 @@ def kpartite_cliques(graph, clique_size=3, **unused_kwargs):
     """
 
     def accept_clique(clique):
-        # clique must be of length clique_size
-        if len(clique) != clique_size:
-            return False
-
-        # all k nodes in the clique must be from different pickers
+        # there must be k nodes from k different pickers in the clique
         if len(set([graph.nodes[v]["picker"] for v in clique])) != clique_size:
             return False
 
@@ -106,16 +102,15 @@ def fpconsensus_table(
         one_many_table[k] = np.array(v, dtype=object)
 
     for mrc in tqdm(unique_mrcs):
-        # build a dict of box lists, keyed by picker name
-        box_lists = {}
         mrc_indices = np.where(one_many_table[mrc_key] == mrc)[0]
-        for picker in pickers:
-            boxes = list(flatten(list(one_many_table[picker][mrc_indices])))
 
-            # remove boxes with ground-truth overlap outside gt_overlap_range
+        # build a dict of box lists, keyed by picker name
+        # only keep boxes with ground-truth overlap within gt_overlap_range
+        box_lists = {}
+        for picker in pickers:
             box_lists[picker] = [
                 box
-                for box, jac in boxes
+                for box, jac in flatten(list(one_many_table[picker][mrc_indices]))
                 if jac >= gt_overlap_range[0] and jac <= gt_overlap_range[1]
             ]
 
@@ -127,15 +122,14 @@ def fpconsensus_table(
         for clique in cliques:
             # ignore clique if the lowest overlap between any two of its boxes
             # is less than min_clique_agreement
-            do_skip = any(
+            min_jac = min(
                 [
-                    edge["weight"] < min_clique_agreement
+                    graph.get_edge_data(u, v)["weight"]
                     for u, v in combinations(clique, 2)
-                    for edge in graph.get_edge_data(u, v)
                 ]
             )
 
-            if do_skip:
+            if min_jac < min_clique_agreement:
                 continue
 
             # we're ok to add this clique
@@ -173,7 +167,7 @@ if __name__ == "__main__":
         help=f"Clique sizes for which to create tables",
         required=True,
         nargs="+",
-        type=float,
+        type=int,
     )
     parser.add_argument(
         "--gt_overlap_range",
@@ -227,7 +221,7 @@ if __name__ == "__main__":
             gt_overlap_range=a.gt_overlap_range,
             min_clique_agreement=a.min_clique_agreement,
             # graph_kwargs start here
-            clique_size=a.k,
+            clique_size=clique_size,
             conf_range=a.conf_range,
         )
 
