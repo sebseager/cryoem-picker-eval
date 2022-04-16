@@ -77,18 +77,6 @@ def kpartite_cliques(graph, clique_size=3, **unused_kwargs):
         if len(set([graph.nodes[v]["picker"] for v in clique])) != clique_size:
             return False
 
-        # overlap between any two boxes in clique must satisfy min_clique_agreement
-        min_overlap = float("inf")
-        for u, v in combinations(clique, 2):
-            for edge in graph.get_edge_data(u, v):
-                try:
-                    if edge["weight"] < min_overlap:
-                        min_overlap = edge["weight"]
-                except TypeError:  # in some cases edge may be None
-                    pass
-                if min_overlap < min_clique_agreement:
-                    return False
-
         return True
 
     cliques = filter(accept_clique, nx.enumerate_all_cliques(graph))
