@@ -150,26 +150,42 @@ def read_from_pickle(path):
         return pickle.load(f)
 
 
-def write_to_pickle(out_dir, obj, filename, force=False):
-    """Write serializable object to pickle file with filename in given directory."""
+def write_to_pickle(out_dir, obj, filename, rename_on_collision=True, force=False):
+    """Write serializable object to pickle file with filename in given directory.
+
+    Args:
+        out_dir (str): Path to output directory
+        obj (object): Object of any serializable type (None, True, False, str, int,
+            byte, bytearray, non-lambda functions, and any tuple, list, set, or dict
+            of these)
+        filename (str): Target filename (including extension) that obj will be written to
+        rename_on_collision (bool, optional): If force is False and a filename
+            collision occurs, rename the file by appending the current datetime to
+            obj always gets written to a file. Defaults to True.
+        force (bool, optional): Overwrite target file. Defaults to False.
+    """
+
+    def perform_write(path):
+        # write mode "x" raises an exception if file already exists
+        write_mode = "wb" if force else "xb"
+        with open(path, write_mode) as f:
+            pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
+        log(f"wrote to {path}")
 
     # make sure output directory exists
     out_dir = norm_path(out_dir)
     if not out_dir.is_dir():
         out_dir.mkdir(parents=True)
-
-    # skip if matchings file already exists
     out_path = out_dir / filename
-    if not force and out_path.exists():
-        log("set force to True to overwrite existing file matches", lvl=2)
-        exit(1)
 
-    # write table to pickle
-    write_mode = "wb" if force else "xb"
     try:
-        with open(out_path, write_mode) as f:
-            pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
-        log(f"wrote file matches to {out_path}")
+        perform_write(out_path)
     except FileExistsError:
-        log(f"file {out_path} already exists and --force is not set", lvl=2)
-        exit(1)
+        if rename_on_collision:
+            log(f"file already exists at {out_path}; attempting to rename")
+            time_str = datetime.now().strftime("_%y%m%d%H%M%S")
+            out_path = out_path.with_suffix("") + time_str + out_path.suffix
+            perform_write(out_path)
+        else:
+            log(f"file already exists at {out_path}; skipping", lvl=1)
+            return

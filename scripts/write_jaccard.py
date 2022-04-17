@@ -319,7 +319,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--force",
-        help="Overwrite (recalculate) any temporary data files in output directory",
+        help="Allow overwriting files in output directory",
         action="store_true",
     )
 

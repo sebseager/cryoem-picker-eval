@@ -211,12 +211,19 @@ if __name__ == "__main__":
         "any two boxes in a given clique. Defaults to 'jac'.",
         default="jac",
     )
+    parser.add_argument(
+        "--force",
+        help="Allow overwriting files in output directory",
+        action="store_true",
+    )
 
     a = parser.parse_args()
 
     matches = read_from_pickle(a.one_many_matches_path)
 
     for clique_size in a.k:
+        log(f"calculating cliques of size {clique_size}")
+
         table = fpconsensus_table(
             matches,
             mrc_key=a.mrc_key,
@@ -229,12 +236,10 @@ if __name__ == "__main__":
             conf_range=a.conf_range,
         )
 
-        # since this takes a while to process, make sure we always write to disk
-        # resolve filename conflicts by appending datetime string
-        a.out_dir = norm_path(a.out_dir)
-        filename, ext = f"fpcliques_{clique_size}", ".pickle"
-        if (a.out_dir / (filename + ext)).is_file():
-            print(f"filename {filename} already exists; appending current date string")
-            filename += datetime.now().strftime("_%y%m%d%H%M%S")
-
-        write_to_pickle(a.out_dir, table, filename + ext)
+        write_to_pickle(
+            a.out_dir,
+            table,
+            f"fpcliques_{clique_size}.pickle",
+            rename_on_collision=True,
+            force=a.force,
+        )
