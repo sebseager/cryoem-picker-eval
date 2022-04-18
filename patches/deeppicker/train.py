@@ -5,6 +5,7 @@ from __future__ import print_function
 from datetime import datetime
 import os
 import os.path
+import sys
 import time
 
 import numpy as np
@@ -40,14 +41,14 @@ def train():
     parser.add_option("--model_save_dir", dest="model_save_dir", help="save the model to this directory", metavar="DIRECTORY", default="../trained_model")
     parser.add_option("--model_save_file", dest="model_save_file", help="save the model to file", metavar="FILE")
     (opt, args) = parser.parse_args()
- 
+
     # set the tensoflow seed
     tf.set_random_seed(1234)
     # set the numpy seed
     np.random.seed(1234)
 
     # define the input size of the model
-    model_input_size = [100, 64, 64, 1]
+    model_input_size = [32, 64, 64, 1]#[100, 64, 64, 1]
     num_class = 2                   # the number of the class
     batch_size = model_input_size[0]
 
@@ -55,11 +56,11 @@ def train():
     train_type = int(opt.train_type)
     train_inputDir = opt.train_inputDir
     train_inputFile = opt.train_inputFile
-    train_number = float(opt.train_number) 
+    train_number = float(opt.train_number)
     mrc_number = int(opt.mrc_number)
     coordinate_symbol = opt.coordinate_symbol
     particle_size = int(opt.particle_size)
-    validation_ratio = float(opt.validation_ratio)   
+    validation_ratio = float(opt.validation_ratio)
 
     # define the save model
     model_retrain = opt.model_retrain
@@ -88,7 +89,9 @@ def train():
     if train_type == 1:
         # load train data from mrc file dir
         train_number = int(train_number)
-        train_data, train_label, eval_data, eval_label = dataLoader.load_trainData_From_mrcFileDir(train_inputDir, particle_size, model_input_size, validation_ratio, coordinate_symbol, mrc_number, train_number)
+        # train_data, train_label, eval_data, eval_label = dataLoader.load_trainData_From_mrcFileDir(train_inputDir, particle_size, model_input_size, validation_ratio, coordinate_symbol, mrc_number, train_number)
+        train_data, train_label,_,_ = dataLoader.load_trainData_From_mrcFileDir(train_inputDir, particle_size, model_input_size, 0., coordinate_symbol,-1,999999999)
+        eval_data, eval_label,_,_ = dataLoader.load_trainData_From_mrcFileDir(train_inputDir.replace("train/","val/"), particle_size, model_input_size, 0., coordinate_symbol,-1,999999999)
     elif train_type == 2:
         # load train data from numpy data struct
         train_number = int(train_number)
@@ -97,15 +100,15 @@ def train():
         # load train data from prepicked results
         train_data, train_label, eval_data, eval_label = dataLoader.load_trainData_From_PrePickedResults(train_inputDir, train_inputFile, particle_size, model_input_size, validation_ratio, train_number)
     elif train_type == 4:
-        # load train data from relion .star file 
+        # load train data from relion .star file
         train_number = int(train_number)
         train_data, train_label, eval_data, eval_label = dataLoader.load_trainData_From_RelionStarFile(train_inputFile, particle_size, model_input_size, validation_ratio, train_number)
     else:
-        print("ERROR: invalid value of train_type:", train_type)    
+        print("ERROR: invalid value of train_type:", train_type)
 
     # display.show_particle(train_data, os.path.join(debug_dir, 'positive.png'))
     # test whether train_data exist
-    try: 
+    try:
         train_data
     except NameError:
         print("ERROR: in function load.loadInputTrainData.")
@@ -117,7 +120,7 @@ def train():
     eval_data, eval_label = shuffle_in_unison_inplace(eval_data, eval_label)
 
     train_size = train_data.shape[0]
-    eval_size = eval_data.shape[0]    
+    eval_size = eval_data.shape[0]
     # initalize the decay_steps based on train_size and batch size.
     # change the learning rate each 2 epochs
     learning_rate_decay_steps = 10*(train_size // batch_size)
@@ -127,18 +130,18 @@ def train():
                                   decay_steps = learning_rate_decay_steps, staircase = learning_rate_staircase)
     deepModel.init_momentum(momentum = momentum)
     # initialize the model
-    # define the computation procedure of optimizer, loss, lr, prediction, eval_prediction 
+    # define the computation procedure of optimizer, loss, lr, prediction, eval_prediction
     deepModel.init_model_graph_train()
     saver = tf.train.Saver(tf.all_variables())
-    
+
     start_time = time.time()
     init = tf.initialize_all_variables()
     with tf.Session(config=tf.ConfigProto(log_device_placement=False)) as sess:
         # initialize all the parameters
         sess.run(init)
-        max_epochs = 200   # the max number of epoch to train the model
+        max_epochs = 300   # the max number of epoch to train the model
         best_eval_error_rate = 100
-        toleration_patience = 10 
+        toleration_patience = 10
         toleration_patience_flag  = 0
         eval_frequency = train_size // batch_size   # the frequency to evaluate the evaluation dataset
         for step in xrange(int(max_epochs * train_size) // batch_size):
@@ -156,9 +159,9 @@ def train():
                 start_time = time.time()
                 eval_prediction = deepModel.evaluation(eval_data, sess)
                 eval_error_rate = error_rate(eval_prediction, eval_label)
-                print('epoch: %.2f , %.2f ms' % (step * batch_size /train_size, 1000 * stop_time / eval_frequency)) 
-                print('train loss: %.6f,\t learning rate: %.6f' % (loss_value, lr)) 
-                print('train error: %.6f%%,\t valid error: %.6f%%' % (error_rate(train_prediction, batch_label), eval_error_rate))         
+                print('epoch: %.2f , %.2f ms' % (step * batch_size /train_size, 1000 * stop_time / eval_frequency))
+                print('train loss: %.6f,\t learning rate: %.6f' % (loss_value, lr))
+                print('train error: %.6f%%,\t valid error: %.6f%%' % (error_rate(train_prediction, batch_label), eval_error_rate))
                 if eval_error_rate < best_eval_error_rate:
                     best_eval_error_rate = eval_error_rate
                     toleration_patience = 10
