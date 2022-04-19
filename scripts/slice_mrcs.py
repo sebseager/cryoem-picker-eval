@@ -46,7 +46,7 @@ if __name__ == "__main__":
             log(f"unsupported shape for {mrcs_paths[i]}: {mrc.shape}", lvl=1)
             continue
 
-        log(f"resizing (h, w): {mrc.shape} --> {new_mrc.shape}")
+        log(f"resizing (h, w): {mrc.shape} -> {new_mrc.shape}")
         new_mrc_path = Path(a.o) / mrcs_paths[i].name
 
         try:
