@@ -13,6 +13,8 @@ USER_ID                 # for constructing paths
 DATASET_ID              # for constructing paths
 DATASET_HOME            # main directory for this dataset
 UTIL_SCRIPT_DIR         # path to scripts/ directory in this repo
+PICKER_INSTALL_DIR      # path to picker installation directory
+                        # (e.g., for pickers installed directly from git)
 
 GT_SUFFIX               # ground truth file suffix, excluding the dot
 ANG_PIX_RES             # pixel resolution, in Angstroms (A/pix)
@@ -158,10 +160,8 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/cryolo
 ### Predict test set with general model
 
 ```bash
-# make output directories
-mkdir -p ${DATASET_HOME}/relion/cryolo/general
-
 # download general model
+mkdir -p ${DATASET_HOME}/relion/cryolo/general
 cd ${DATASET_HOME}/relion/cryolo/general
 wget ftp://ftp.gwdg.de/pub/misc/sphire/crYOLO-GENERAL-MODELS/gmodel_phosnet_202005_N63_c17.h5
 
@@ -196,7 +196,7 @@ cryolo_gui.py config ${DATASET_HOME}/relion/cryolo/refined/config_cryolo.json ${
 cryolo_predict.py -c ${DATASET_HOME}/relion/cryolo/refined/config_cryolo.json -w ${DATASET_HOME}/relion/cryolo/refined/refined_weights.h5 -i ${DATASET_HOME}/relion/test_img/ -g 0 -o ${DATASET_HOME}/relion/cryolo/refined/ -t 0.3
 ```
 
-### Compare general and refined models
+### Score general and refined models
 
 ```bash
 # create evaluation environment (if needed)
@@ -238,46 +238,40 @@ echo "refined" $(tail -1 ${DATASET_HOME}/relion/cryolo/refined/particle_set_comp
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/topaz
 ```
 
-# predict test set with general model
+### Predict test set with general model
 
+```bash
+# downsample and normalize micrographs
 mkdir -p ${DATASET_HOME}/relion/topaz/general
 cd ${DATASET_HOME}/relion/topaz/general
 
-# downsample and normalize mrcs
+# apply particle scaling
+topaz preprocess -s ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/ ${DATASET_HOME}/relion/test_img/*.mrc
 
-topaz preprocess -s ${TOPAZ*SCALE} -o ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/ ${DATASET_HOME}/relion/test_img/*.mrc
-topaz extract -r ${TOPAZ*PARTICLE_RAD} -x ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/general/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/*.mrc
+# pick particles
+topaz extract -r ${TOPAZ_PARTICLE_RAD} -x ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/general/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/*.mrc
+```
 
-# convert predictons to box format
+### Train model from scratch
 
-mkdir -p ${DATASET_HOME}/relion/topaz/general/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/topaz/general/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/BOX/ -f tsv -t box -b ${EMAN_BOXSIZE_PIX} -c 1 2 none none 3 0 --header --multi_out
-
-# predict test set with model trained from scratch
-
-topaz preprocess -s ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/refined/train_img_downsampled/ ${DATASET_HOME}/relion/train_img/\*.mrc
+```bash
+# preprocess train micrographs
+topaz preprocess -s ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/refined/train_img_downsampled/ ${DATASET_HOME}/relion/train_img/*.mrc
 
 # convert train particles to topaz input format
-
 mkdir -p ${DATASET_HOME}/relion/topaz/refined/train_annot/
-ls ${DATASET_HOME}/ground_truth/*.${GT_SUFFIX} | head -8 | xargs -n 1 -I {} python ${UTIL_SCRIPT_DIR}/coord_converter.py {} ${DATASET_HOME}/relion/topaz/refined/train_annot/ -f ${GT_SUFFIX} -t box -b ${EMAN_BOXSIZE_PIX} --round 0 -s ''
-topaz convert -s ${TOPAZ_SCALE} ${DATASET_HOME}/relion/topaz/refined/train_annot/\*.box -o ${DATASET_HOME}/relion/topaz/refined/train_particles.txt
-rm -rf ${DATASET_HOME}/relion/topaz/refined/train_annot/
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/train_annot/*.box -o ${DATASET_HOME}/relion/topaz/refined/train_annot/ -f box -t box -b ${EMAN_BOXSIZE_PIX} --round 0 -s ""
+topaz convert -s ${TOPAZ_SCALE} ${DATASET_HOME}/relion/topaz/refined/train_annot/*.box -o ${DATASET_HOME}/relion/topaz/refined/train_particles.txt
 
-# validation set
-
+# preprocess validation micrographs
 topaz preprocess -s ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/refined/val_img_downsampled/ ${DATASET_HOME}/relion/val_img/*.mrc
+
+# convert validation particles to topaz input format
 mkdir -p ${DATASET_HOME}/relion/topaz/refined/val_annot/
-ls ${DATASET_HOME}/ground_truth/*.${GT_SUFFIX} | head -10 | tail -2 | xargs -n 1 -I {} python ${UTIL_SCRIPT_DIR}/coord_converter.py {} ${DATASET_HOME}/relion/topaz/refined/val_annot/ -f ${GT_SUFFIX} -t box -b ${EMAN_BOXSIZE_PIX} --round 0 -s ''
-topaz convert -s ${TOPAZ_SCALE} ${DATASET_HOME}/relion/topaz/refined/val_annot/\*.box -o ${DATASET_HOME}/relion/topaz/refined/val_particles.txt
-rm -rf ${DATASET_HOME}/relion/topaz/refined/val_annot/
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/val_annot/*.box -o ${DATASET_HOME}/relion/topaz/refined/val_annot/ -f box -t box -b ${EMAN_BOXSIZE_PIX} --round 0 -s ""
+topaz convert -s ${TOPAZ_SCALE} ${DATASET_HOME}/relion/topaz/refined/val_annot/*.box -o ${DATASET_HOME}/relion/topaz/refined/val_particles.txt
 
-# train topaz model from scratch
-
-# 180/(4\*_2) ~ 12 _ 2 = 24 pixels -> conv31
-
-# -m conv31
-
+# run training
 topaz train -r ${TOPAZ_PARTICLE_RAD} -n ${NUM_PARTICLES_PER_MRC} --num-workers 8 \
  --train-images ${DATASET_HOME}/relion/topaz/refined/train_img_downsampled/ \
  --train-targets ${DATASET_HOME}/relion/topaz/refined/train_particles.txt \
@@ -286,46 +280,62 @@ topaz train -r ${TOPAZ_PARTICLE_RAD} -n ${NUM_PARTICLES_PER_MRC} --num-workers 8
  --save-prefix ${DATASET_HOME}/relion/topaz/refined/model \
  --model ${TOPAZ_MODEL} \
  -o ${DATASET_HOME}/relion/topaz/refined/model_training.txt
+```
 
-# extract particles
+### Predict test set with refined model
 
-topaz extract -r ${TOPAZ_PARTICLE_RAD} -x ${TOPAZ_SCALE} -m ${DATASET_HOME}/relion/topaz/refined/model_epoch10.sav -o ${DATASET_HOME}/relion/topaz/refined/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/\*.mrc
+```bash
+# pick particles using model
+topaz extract -r ${TOPAZ_PARTICLE_RAD} -x ${TOPAZ_SCALE} -m ${DATASET_HOME}/relion/topaz/refined/model_epoch10.sav -o ${DATASET_HOME}/relion/topaz/refined/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/*.mrc
+```
+
+### Score general and refined models
+
+```bash
+# convert general model picks to individual box files
+mkdir -p ${DATASET_HOME}/relion/topaz/general/BOX/
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/topaz/general/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/BOX/ -f tsv -t box -b ${EMAN_BOXSIZE_PIX} -c 1 2 none none 3 0 --header --multi_out
+
+# score general model
+python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/topaz/general/BOX/*.box &> ${DATASET_HOME}/relion/topaz/general/particle_set_comp.txt
+
+# convert refined model picks to individual box files
 mkdir -p ${DATASET_HOME}/relion/topaz/refined/BOX/
 python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/topaz/refined/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/refined/BOX/ -f tsv -t box -b ${EMAN_BOXSIZE_PIX} -c 1 2 none none 3 0 --header --multi_out
 
-# general -> 85.917%
+# score refined model
+python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/topaz/refined/BOX/*.box &> ${DATASET_HOME}/relion/topaz/refined/particle_set_comp.txt
 
-# refined -> 62.724% (conv31)
+# print scores
+echo "general" $(tail -1 ${DATASET_HOME}/relion/topaz/general/particle_set_comp.txt)
+echo "refined" $(tail -1 ${DATASET_HOME}/relion/topaz/refined/particle_set_comp.txt)
+```
 
-# refined -> 83.847% (resnet8)
+## AutoCryoPicker
 
-python ${UTIL*SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET*HOME}/relion/topaz/general/BOX/*.box &> ${DATASET*HOME}/relion/topaz/general/particle_set_comp.txt
-python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET*HOME}/relion/topaz/refined/BOX/*.box &> ${DATASET_HOME}/relion/topaz/refined/particle_set_comp.txt
+### Installation and patching
 
-##
+```bash
+# get latest version from github
+git clone https://github.com/jianlin-cheng/AutoCryoPicker.git ${PICKER_INSTALL_DIR}/AutoCryoPicker/
 
-# identify particles with AutoCryoPicker
+# apply our patch
+cp YOUR/PATH/TO/patches/autocryopicker/AutoPicker_Final_Demo.m ${PICKER_INSTALL_DIR}/AutoCryoPicker//Signle\ Particle\ Detection_Demo/AutoPicker_Final_Demo.m
+```
 
-##
+### Convert micrographs to PNG images
 
-# install
+```bash
+python ${UTIL_SCRIPT_DIR}/mrc_to_img.py ${DATASET_HOME}/relion/test_img/*.mrc -f png -o ${DATASET_HOME}/pngs
+```
 
-# git clone https://github.com/jianlin-cheng/AutoCryoPicker.git /gpfs/slayman/pi/gerstein/cjc255/tools/AutoCryoPicker/
+### Pick particles (using batch job)
 
-# apply Seb's patch
-
-# cp /gpfs/gibbs/pi/gerstein/sjs264/imppel/docs/patches/autocryopicker/AutoPicker_Final_Demo.m /gpfs/slayman/pi/gerstein/cjc255/tools/AutoCryoPicker/Signle\ Particle\ Detection_Demo/AutoPicker_Final_Demo.m
-
-# convert mrcs to pngs
-
-python ${UTIL_SCRIPT_DIR}/mrc_to_img.py ${DATASET_HOME}/relion/test_img/\*.mrc -f png -o ${DATASET_HOME}/pngs
-
-# make output dirs
-
+```bash
+# make output directory
 mkdir -p ${DATASET_HOME}/relion/autocryopicker/BOX/
 
-# process micrographs in batch job
-
+# write slurm batch job
 cat << END > ${DATASET_HOME}/relion/autocryopicker/run_submit.script
 #!/bin/bash
 #SBATCH --job-name=autocryopicker
@@ -341,22 +351,99 @@ cat << END > ${DATASET_HOME}/relion/autocryopicker/run_submit.script
 module load MATLAB/2020b
 sleep 5s
 
-cd /gpfs/slayman/pi/gerstein/cjc255/tools/AutoCryoPicker/Signle\ Particle\ Detection_Demo/
-
+cd ${PICKER_INSTALL_DIR}/AutoCryoPicker//Signle\ Particle\ Detection_Demo/
 out_dir=${DATASET_HOME}/relion/autocryopicker/BOX/
 for f in ${DATASET_HOME}/pngs/\*.png; do
-out_name=\$(basename \$f)
-label_file="\${out_dir}/\${out_name%.png}.box"
-matlab -nosplash -nodisplay -r "mrc='\$f';out_dir='\$out_dir';AutoPicker_Final_Demo" -logfile "\$label_file"
-awk '/AUTOCRYOPICKER_DETECTIONS_START/ ? c++ : c' \${label_file} > \${label_file/.box/.tmp} && mv \${label_file/.box/.tmp} \${label_file}
+    out_name=\$(basename \$f)
+    label_file="\${out_dir}/\${out_name%.png}.box"
+    matlab -nosplash -nodisplay -r "mrc='\$f';out_dir='\$out_dir';AutoPicker_Final_Demo" -logfile "\$label_file"
+    awk '/AUTOCRYOPICKER_DETECTIONS_START/ ? c++ : c' \${label_file} > \${label_file/.box/.tmp} && mv \${label_file/.box/.tmp} \${label_file}
 done
 END
 
+# submit the script
 sbatch ${DATASET_HOME}/relion/autocryopicker/run_submit.script
+```
 
-# score on 10017 -> 23.109%
+### Score model
 
-python ${UTIL*SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET*HOME}/relion/autocryopicker/BOX/*.box &> ${DATASET_HOME}/relion/autocryopicker/particle_set_comp.txt
+```bash
+# calculate score
+python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/autocryopicker/BOX/*.box &> ${DATASET_HOME}/relion/autocryopicker/particle_set_comp.txt
+
+# print score
+echo "general" $(tail -1 ${DATASET_HOME}/relion/autocryopicker/general/particle_set_comp.txt)
+```
+
+## DeepPicker
+
+### Installation and patching
+
+```bash
+# get latest version from github
+git clone https://github.com/nejyeah/DeepPicker-python.git ${PICKER_INSTALL_DIR}/deeppicker
+
+# apply our patch
+cp YOUR/PATH/TO/patches/deeppicker/*.py ${PICKER_INSTALL_DIR}/deeppicker
+```
+
+### Pick particles with general model
+
+```bash
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
+
+
+```
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+# pick particles with general model
+
+mkdir -p ${DATASET_HOME}/relion/deeppicker/general/STAR/
+python /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/relion/test_img/ --pre_trained_model /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/trained_model/model_demo_type3 --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/general/STAR/ --coordinate_symbol \_deeppicker --threshold 0.5
+mkdir -p ${DATASET_HOME}/relion/deeppicker/general/BOX/
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/deeppicker/general/STAR/\*.star ${DATASET_HOME}/relion/deeppicker/general/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --header
+rm -rf ${DATASET_HOME}/relion/deeppicker/general/STAR/
+
+# create collection of train mrcs and particles
+
+mkdir -p ${DATASET*HOME}/relion/deeppicker/train/
+cp -s ${DATASET_HOME}/relion/train_img/*.mrc ${DATASET*HOME}/relion/deeppicker/train/
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/train_annot/*.box ${DATASET_HOME}/relion/deeppicker/train/ -f box -t star -b ${EMAN_BOXSIZE_PIX} --header --force
+
+# train model from scratch and pick particles
+
+mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
+
+# particle number = wc -l ${DATASET_HOME}/relion/deeppicker/train/\*.box
+
+python /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/train.py --train_type 1 --train_inputDir ${DATASET_HOME}/relion/deeppicker/train/ --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --particle_number 4374 --coordinate_symbol '' --model_retrain --model_load_file /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/trained_model/model_demo_type3 --model_save_dir ${DATASET_HOME}/relion/deeppicker/refined/ --model_save_file model_demo_type3_refined
+
+# pick with trained model
+
+python /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/relion/test_img/ --pre_trained_model ${DATASET_HOME}/relion/deeppicker/refined/model_demo_type3_refined --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/refined/STAR/ --coordinate_symbol \_deeppicker --threshold 0.5
+mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/BOX/
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/deeppicker/refined/STAR/\*.star ${DATASET_HOME}/relion/deeppicker/refined/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
+rm -rf ${DATASET_HOME}/relion/deeppicker/refined/STAR/
+
+# general -> 62.628%
+
+# refined -> 84.181%
+
+python ${UTIL*SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET*HOME}/relion/deeppicker/general/BOX/*.box &> ${DATASET*HOME}/relion/deeppicker/general/particle_set_comp.txt
+python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET*HOME}/relion/deeppicker/refined/BOX/*.box &> ${DATASET_HOME}/relion/deeppicker/refined/particle_set_comp.txt
+
+# visual comparison
+
+mkdir -p ${DATASET_HOME}/relion/deeppicker/vis_cmp/
+
+# cp -s ${DATASET_HOME}/relion/test_annot/Falcon_2012_06_12-15_43_48_0.box ${DATASET_HOME}/relion/deeppicker/vis_cmp/ground_truth.box
+
+cp -s ${DATASET_HOME}/relion/deeppicker/refined/BOX/Falcon_2012_06_12-15_43_48_0_deeppicker.box ${DATASET_HOME}/relion/deeppicker/vis_cmp/refined.box
+cp -s ${DATASET_HOME}/relion/deeppicker/general/BOX/Falcon_2012_06_12-15_43_48_0_deeppicker.box ${DATASET_HOME}/relion/deeppicker/vis_cmp/general.box
+
+python ${UTIL_SCRIPT_DIR}/plot_boxfile.py -m ${DATASET_HOME}/relion/test_img/Falcon_2012_06_12-15_43_48_0.mrc -g ${DATASET_HOME}/relion/test_annot/Falcon_2012_06_12-15_43_48_0.box -p ${DATASET_HOME}/relion/deeppicker/vis_cmp/\*.box --num_gt 32 -o ${DATASET_HOME}/relion/deeppicker/vis_cmp/ --force &> ${DATASET_HOME}/relion/deeppicker/vis_cmp/stdout.txt
 
 ##
 
@@ -421,65 +508,6 @@ rm -rf ${DATASET_HOME}/relion/aspire/tmp/
 python ${UTIL*SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET*HOME}/relion/aspire/BOX/*.box &> ${DATASET_HOME}/relion/aspire/particle_set_comp.txt
 
 ##
-
-# identify particles with DeepPicker
-
-##
-
-# install and patch
-
-# git clone https://github.com/nejyeah/DeepPicker-python.git /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker
-
-# cp /gpfs/gibbs/pi/gerstein/sjs264/imppel/docs/patches/deeppicker/\*.py /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker
-
-source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
-
-# pick particles with general model
-
-mkdir -p ${DATASET_HOME}/relion/deeppicker/general/STAR/
-python /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/relion/test_img/ --pre_trained_model /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/trained_model/model_demo_type3 --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/general/STAR/ --coordinate_symbol \_deeppicker --threshold 0.5
-mkdir -p ${DATASET_HOME}/relion/deeppicker/general/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/deeppicker/general/STAR/\*.star ${DATASET_HOME}/relion/deeppicker/general/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --header
-rm -rf ${DATASET_HOME}/relion/deeppicker/general/STAR/
-
-# create collection of train mrcs and particles
-
-mkdir -p ${DATASET*HOME}/relion/deeppicker/train/
-cp -s ${DATASET_HOME}/relion/train_img/*.mrc ${DATASET*HOME}/relion/deeppicker/train/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/train_annot/*.box ${DATASET_HOME}/relion/deeppicker/train/ -f box -t star -b ${EMAN_BOXSIZE_PIX} --header --force
-
-# train model from scratch and pick particles
-
-mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
-
-# particle number = wc -l ${DATASET_HOME}/relion/deeppicker/train/\*.box
-
-python /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/train.py --train_type 1 --train_inputDir ${DATASET_HOME}/relion/deeppicker/train/ --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --particle_number 4374 --coordinate_symbol '' --model_retrain --model_load_file /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/trained_model/model_demo_type3 --model_save_dir ${DATASET_HOME}/relion/deeppicker/refined/ --model_save_file model_demo_type3_refined
-
-# pick with trained model
-
-python /gpfs/slayman/pi/gerstein/cjc255/tools/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/relion/test_img/ --pre_trained_model ${DATASET_HOME}/relion/deeppicker/refined/model_demo_type3_refined --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/refined/STAR/ --coordinate_symbol \_deeppicker --threshold 0.5
-mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/deeppicker/refined/STAR/\*.star ${DATASET_HOME}/relion/deeppicker/refined/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
-rm -rf ${DATASET_HOME}/relion/deeppicker/refined/STAR/
-
-# general -> 62.628%
-
-# refined -> 84.181%
-
-python ${UTIL*SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET*HOME}/relion/deeppicker/general/BOX/*.box &> ${DATASET*HOME}/relion/deeppicker/general/particle_set_comp.txt
-python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET*HOME}/relion/deeppicker/refined/BOX/*.box &> ${DATASET_HOME}/relion/deeppicker/refined/particle_set_comp.txt
-
-# visual comparison
-
-mkdir -p ${DATASET_HOME}/relion/deeppicker/vis_cmp/
-
-# cp -s ${DATASET_HOME}/relion/test_annot/Falcon_2012_06_12-15_43_48_0.box ${DATASET_HOME}/relion/deeppicker/vis_cmp/ground_truth.box
-
-cp -s ${DATASET_HOME}/relion/deeppicker/refined/BOX/Falcon_2012_06_12-15_43_48_0_deeppicker.box ${DATASET_HOME}/relion/deeppicker/vis_cmp/refined.box
-cp -s ${DATASET_HOME}/relion/deeppicker/general/BOX/Falcon_2012_06_12-15_43_48_0_deeppicker.box ${DATASET_HOME}/relion/deeppicker/vis_cmp/general.box
-
-python ${UTIL_SCRIPT_DIR}/plot_boxfile.py -m ${DATASET_HOME}/relion/test_img/Falcon_2012_06_12-15_43_48_0.mrc -g ${DATASET_HOME}/relion/test_annot/Falcon_2012_06_12-15_43_48_0.box -p ${DATASET_HOME}/relion/deeppicker/vis_cmp/\*.box --num_gt 32 -o ${DATASET_HOME}/relion/deeppicker/vis_cmp/ --force &> ${DATASET_HOME}/relion/deeppicker/vis_cmp/stdout.txt
 
 ##
 
@@ -1032,3 +1060,7 @@ rm ${DATASET_HOME}/relion/*.${GT_SUFFIX}
 # -> Compute/use GPU acceleration: Yes
 
 # -> 5 MPI procs, Yes, gpu, sbatch, no. of GPUs=4
+
+```
+
+```
