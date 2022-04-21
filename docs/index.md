@@ -4,7 +4,7 @@ title: Home
 nav_order: 1
 ---
 
-# Cryo-EM Particle Picker Docs
+# Cryo-EM Particle Picker Comparison Analysis
 
 ## Table of Contents
 
@@ -39,7 +39,7 @@ cryo-docs/              <-- this repo
 ... etc.
 ```
 
-If you haven't already, please clone the most recent version of this repo (which follows the above structure) and change directory into the clone. **All installation guides will begin by assuming that your current working directory is `cryo-docs/`.** Note that here and in all guides, `/path/to/something` should be replaced by the path to the indicated resource on your system.
+If you haven't already, please clone the most recent version of this repo (which follows the above structure) and change directory into the clone. **All installation guides will begin by assuming that your current working directory is the root of this repository.** Note that here and in all guides, `/path/to/something` should be replaced by the path to the indicated resource on your system.
 
 ```shell script
 git clone --depth 1 https://github.com/sebseager/cryo-docs.git && cd cryo-docs
