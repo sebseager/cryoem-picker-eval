@@ -152,14 +152,7 @@ eval ls ${GT_FILES} | tail -10 | xargs -n 1 -I {} python ${UTIL_SCRIPT_DIR}/coor
 
 ## crYOLO
 
-**Note: this must be run on a GPU!**
-
-```bash
-# activate the cryolo environment
-source ${CONDA_ACTIVATE} ${CONDA_ENVS}/cryolo
-```
-
-Predict test set with general model
+Predict test set with general model. **Note: this must be run on a GPU!**
 
 ```bash
 # download general model
@@ -167,35 +160,94 @@ mkdir -p ${DATASET_HOME}/relion/cryolo/general
 cd ${DATASET_HOME}/relion/cryolo/general
 wget ftp://ftp.gwdg.de/pub/misc/sphire/crYOLO-GENERAL-MODELS/gmodel_phosnet_202005_N63_c17.h5
 
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/cryolo/general/run_submit.script
+#!/bin/bash
+#SBATCH --job-name=cryolo_general
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/cryolo/general/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/cryolo
+
 # configure run
 cryolo_gui.py config ${DATASET_HOME}/relion/cryolo/general/config_cryolo.json ${EMAN_BOXSIZE_PIX} --filter LOWPASS --low_pass_cutoff 0.1
 
 # predict
 cryolo_predict.py -c ${DATASET_HOME}/relion/cryolo/general/config_cryolo.json -w ${DATASET_HOME}/relion/cryolo/general/gmodel_phosnet_202005_N63_c17.h5 -i ${DATASET_HOME}/relion/test_img/ -g 0 -o ${DATASET_HOME}/relion/cryolo/general/ -t 0.3
+END
+
+# submit script
+sbatch ${DATASET_HOME}/relion/cryolo/general/run_submit.script
 ```
 
-Refine general model weights
+Refine general model weights. **Note: this must be run on a GPU!**
 
 ```bash
 # make output directories
 mkdir -p ${DATASET_HOME}/relion/cryolo/refined
-cd ${DATASET_HOME}/relion/cryolo/refined
+
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/cryolo/refined/train_submit.script
+#!/bin/bash
+#SBATCH --job-name=cryolo_train
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/cryolo/refined/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/cryolo
 
 # configure train
-cryolo_gui.py config config_cryolo.json ${EMAN_BOXSIZE_PIX} --train_image_folder ${DATASET_HOME}/relion/train_img/ --train_annot_folder ${DATASET_HOME}/relion/train_annot/ --valid_image_folder ${DATASET_HOME}/relion/val_img/ --valid_annot_folder ${DATASET_HOME}/relion/val_annot/ --pretrained_weights ${DATASET_HOME}/relion/cryolo/general/gmodel_phosnet_202005_N63_c17.h5 --saved_weights_name ${DATASET_HOME}/relion/cryolo/refined/refined_weights.h5
+cryolo_gui.py config ${DATASET_HOME}/relion/cryolo/refined/config_cryolo_train.json ${EMAN_BOXSIZE_PIX} --train_image_folder ${DATASET_HOME}/relion/train_img/ --train_annot_folder ${DATASET_HOME}/relion/train_annot/ --valid_image_folder ${DATASET_HOME}/relion/val_img/ --valid_annot_folder ${DATASET_HOME}/relion/val_annot/ --pretrained_weights ${DATASET_HOME}/relion/cryolo/general/gmodel_phosnet_202005_N63_c17.h5 --saved_weights_name ${DATASET_HOME}/relion/cryolo/refined/refined_weights.h5
 
 # train
-cryolo_train.py -c ${DATASET_HOME}/relion/cryolo/refined/config_cryolo.json -w 0 -g 0 --fine_tune -lft 2
+cryolo_train.py -c ${DATASET_HOME}/relion/cryolo/refined/config_cryolo_train.json -w 0 -g 0 --fine_tune -lft 2
+END
+
+# submit script
+sbatch ${DATASET_HOME}/relion/cryolo/refined/train_submit.script
 ```
 
-Predict with refined model
+Predict with refined model. **Note: this must be run on a GPU!**
 
 ```bash
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/cryolo/refined/run_submit.script
+#!/bin/bash
+#SBATCH --job-name=cryolo_refined
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/cryolo/refined/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/cryolo
+
 # configure run
-cryolo_gui.py config ${DATASET_HOME}/relion/cryolo/refined/config_cryolo.json ${EMAN_BOXSIZE_PIX} --filter LOWPASS --low_pass_cutoff 0.1
+cryolo_gui.py config ${DATASET_HOME}/relion/cryolo/refined/config_cryolo_pred.json ${EMAN_BOXSIZE_PIX} --filter LOWPASS --low_pass_cutoff 0.1
 
 # predict
-cryolo_predict.py -c ${DATASET_HOME}/relion/cryolo/refined/config_cryolo.json -w ${DATASET_HOME}/relion/cryolo/refined/refined_weights.h5 -i ${DATASET_HOME}/relion/test_img/ -g 0 -o ${DATASET_HOME}/relion/cryolo/refined/ -t 0.3
+cryolo_predict.py -c ${DATASET_HOME}/relion/cryolo/refined/config_cryolo_pred.json -w ${DATASET_HOME}/relion/cryolo/refined/refined_weights.h5 -i ${DATASET_HOME}/relion/test_img/ -g 0 -o ${DATASET_HOME}/relion/cryolo/refined/ -t 0.3
+END
+
+# submit script
+sbatch ${DATASET_HOME}/relion/cryolo/refined/run_submit.script
 ```
 
 Score general and refined models
@@ -233,30 +285,62 @@ echo "refined" $(tail -1 ${DATASET_HOME}/relion/cryolo/refined/particle_set_comp
 
 ## Topaz
 
-**Note: this must be run on a GPU!**
+Predict test set with general model. **Note: this must be run on a GPU!**
 
 ```bash
-# activate the topaz environment
+# make output directories
+mkdir -p ${DATASET_HOME}/relion/topaz/general/
+
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/topaz/general/run_submit.script
+#!/bin/bash
+#SBATCH --job-name=topaz_general
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/topaz/general/slurm-%j.out
+
+# activate environment
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/topaz
-```
 
-Predict test set with general model
-
-```bash
-# downsample and normalize micrographs
-mkdir -p ${DATASET_HOME}/relion/topaz/general
+# apply micrograph downsampling
 cd ${DATASET_HOME}/relion/topaz/general
-
-# apply particle scaling
 topaz preprocess -s ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/ ${DATASET_HOME}/relion/test_img/*.mrc
 
 # pick particles
 topaz extract -r ${TOPAZ_PARTICLE_RAD} -x ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/general/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/*.mrc
+END
+
+# submit script
+sbatch ${DATASET_HOME}/relion/topaz/general/run_submit.script
 ```
 
-Train model from scratch
+Train model from scratch. **Note: this must be run on a GPU!**
 
 ```bash
+# make output directories
+mkdir -p ${DATASET_HOME}/relion/topaz/refined/
+
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/topaz/refined/train_submit.script
+#!/bin/bash
+#SBATCH --job-name=topaz_train
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/topaz/refined/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/topaz
+
 # preprocess train micrographs
 topaz preprocess -s ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/refined/train_img_downsampled/ ${DATASET_HOME}/relion/train_img/*.mrc
 
@@ -282,13 +366,37 @@ topaz train -r ${TOPAZ_PARTICLE_RAD} -n ${NUM_PARTICLES_PER_MRC} --num-workers 8
  --save-prefix ${DATASET_HOME}/relion/topaz/refined/model \
  --model ${TOPAZ_MODEL} \
  -o ${DATASET_HOME}/relion/topaz/refined/model_training.txt
+END
+
+# submit script
+sbatch ${DATASET_HOME}/relion/topaz/refined/train_submit.script
 ```
 
-Predict test set with refined model
+Predict test set with refined model. **Note: this must be run on a GPU!**
 
 ```bash
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/topaz/refined/run_submit.script
+#!/bin/bash
+#SBATCH --job-name=topaz_refined
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/topaz/refined/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/topaz
+
 # pick particles using model
 topaz extract -r ${TOPAZ_PARTICLE_RAD} -x ${TOPAZ_SCALE} -m ${DATASET_HOME}/relion/topaz/refined/model_epoch10.sav -o ${DATASET_HOME}/relion/topaz/refined/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/test_img_downsampled/*.mrc
+END
+
+# submit script
+sbatch ${DATASET_HOME}/relion/topaz/refined/run_submit.script
 ```
 
 Score general and refined models
@@ -335,7 +443,7 @@ Convert micrographs to PNG images
 python ${UTIL_SCRIPT_DIR}/mrc_to_img.py ${DATASET_HOME}/relion/test_img/*.mrc -f png -o ${DATASET_HOME}/pngs
 ```
 
-Pick particles using batch job (general model only). **Note: this must be run on a GPU!**
+Pick particles (general model only). **Note: this must be run on a GPU!**
 
 ```bash
 # make output directory
@@ -413,6 +521,7 @@ cat << END > ${DATASET_HOME}/relion/aspire/run_submit.script
 #SBATCH --gres=gpu:1
 #SBATCH --output=${DATASET_HOME}/relion/aspire/slurm-%j.out
 
+# activate environment
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/aspire
 
 # this script is a wrapper for APPLE picker and bypasses the ASPIRE config system
@@ -466,14 +575,31 @@ cp YOUR/PATH/TO/patches/deeppicker/*.py ${PICKER_INSTALL_DIR}/deeppicker
 Pick particles with general model. **Note: this must be run on a GPU!**
 
 ```bash
-# activate environment
-source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
-
 # make output directories
 mkdir -p ${DATASET_HOME}/relion/deeppicker/general/STAR/
 
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/deeppicker/general/run_submit.script
+#!/bin/bash
+#SBATCH --job-name=deeppicker_general
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/deeppicker/general/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
+
 # pick with general model
 python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/relion/test_img/ --pre_trained_model ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/general/STAR/ --coordinate_symbol _deeppicker --threshold 0.5
+END
+
+# run batch script
+sbatch ${DATASET_HOME}/relion/deeppicker/general/run_submit.script
 ```
 
 Train model from scratch. **Note: this must be run on a GPU!**
@@ -482,6 +608,23 @@ Train model from scratch. **Note: this must be run on a GPU!**
 # make output directories
 mkdir -p ${DATASET_HOME}/relion/deeppicker/train/
 mkdir -p ${DATASET_HOME}/relion/deeppicker/val/
+mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
+
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/deeppicker/refined/train_submit.script
+#!/bin/bash
+#SBATCH --job-name=deeppicker_train
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/deeppicker/refined/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
 
 # collect training data
 cp -s ${DATASET_HOME}/relion/train_img/*.mrc ${DATASET_HOME}/relion/deeppicker/train/
@@ -492,24 +635,27 @@ cp -s ${DATASET_HOME}/relion/val_img/*.mrc ${DATASET_HOME}/relion/deeppicker/val
 python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/val_annot/*.box ${DATASET_HOME}/relion/deeppicker/val/ -f box -t star -b ${EMAN_BOXSIZE_PIX} --header --force
 
 # train model from scratch
-mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
 python ${PICKER_INSTALL_DIR}/deeppicker/train.py --train_type 1 --train_inputDir ${DATASET_HOME}/relion/deeppicker/train/ --particle_size ${EMAN_BOXSIZE_PIX} --coordinate_symbol "" --model_retrain --model_load_file ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --model_save_dir ${DATASET_HOME}/relion/deeppicker/refined/ --model_save_file model_demo_type3_refined
+END
+
+# run batch script
+sbatch ${DATASET_HOME}/relion/deeppicker/refined/train_submit.script
 ```
 
-Run batch script to pick particles using trained model. **Note: this must be run on a GPU!**
+Pick particles using trained model. **Note: this must be run on a GPU!**
 
 _Note that the output of this picking job may contain an error to the effect that the given model file cannot be found. This is expected, as the error comes from a direct file path check, while the tensorflow saver module both writes and reads back files with various extensions appended to the model name._
 
 ```bash
-# write batch script
+# write slurm batch job
 cat << END > ${DATASET_HOME}/relion/deeppicker/refined/run_submit.script
 #!/bin/bash
-#SBATCH --job-name=deeppicker
+#SBATCH --job-name=deeppicker_refined
 #SBATCH --mem=16G
 #SBATCH --time=5:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
-#SBATCH --output=${DATASET_HOME}/relion/deeppicker/slurm-%j.out
+#SBATCH --output=${DATASET_HOME}/relion/deeppicker/refined/slurm-%j.out
 
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
 
@@ -576,7 +722,7 @@ Pick particles with PARSED (general model only). **Note: this must be run on a G
 # make output directory
 mkdir -p ${DATASET_HOME}/relion/parsed/STAR/
 
-# write batch script pick particles with general model
+# write batch script to pick particles with general model
 # don't use blob thresholding (i.e., no data specific optimizations)
 cat << END > ${DATASET_HOME}/relion/parsed/run_submit.script
 #!/bin/bash
