@@ -54,7 +54,7 @@ CASSPER_UTIL            # cassper_util/ currently contains
 
 ## Derived or constant globals
 
-Set these after sourcing the above variables.
+Set these after sourcing the above variables (or append them to the end of your parameter script to set everything at once).
 
 ```bash
 EMAN_BOXSIZE_A=$(echo "$EMAN_BOXSIZE_PIX * $ANG_PIX_RES / 1" | bc)
@@ -171,7 +171,7 @@ wget ftp://ftp.gwdg.de/pub/misc/sphire/crYOLO-GENERAL-MODELS/gmodel_phosnet_2020
 cryolo_gui.py config ${DATASET_HOME}/relion/cryolo/general/config_cryolo.json ${EMAN_BOXSIZE_PIX} --filter LOWPASS --low_pass_cutoff 0.1
 
 # predict
-cryolo_predict.py -c ${DATASET_HOME}/relion/cryolo/general/config_cryolo.json -w ${DATASET_HOME}/relion/cryolo/general gmodel_phosnet_202005_N63_c17.h5 -i ${DATASET_HOME}/relion/test_img/ -g 0 -o ${DATASET_HOME}/relion/cryolo/general/ -t 0.3
+cryolo_predict.py -c ${DATASET_HOME}/relion/cryolo/general/config_cryolo.json -w ${DATASET_HOME}/relion/cryolo/general/gmodel_phosnet_202005_N63_c17.h5 -i ${DATASET_HOME}/relion/test_img/ -g 0 -o ${DATASET_HOME}/relion/cryolo/general/ -t 0.3
 ```
 
 Refine general model weights
