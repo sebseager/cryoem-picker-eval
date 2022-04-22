@@ -54,6 +54,8 @@ CASSPER_UTIL            # cassper_util/ currently contains
 
 ## Derived or constant globals
 
+Set these after sourcing the above variables.
+
 ```bash
 EMAN_BOXSIZE_A=$(echo "$EMAN_BOXSIZE_PIX * $ANG_PIX_RES / 1" | bc)
 QUERY_IMAGE_SIZE=$ASPIRE_BOXSIZE_PIX
@@ -129,7 +131,7 @@ This assumes 20 micrographs and creates a split of: 10 test, 8 train, 2 validati
 
 ```bash
 # globs pointing to all original ground truth and micrograph files
-GT_FILES="${DATASET_HOME}/relion/*.${GT_SUFFIX}"
+GT_FILES="${DATASET_HOME}/ground_truth/*.${GT_SUFFIX}"
 MRC_FILES="${DATASET_HOME}/relion/*.mrc"
 
 # make all output directories

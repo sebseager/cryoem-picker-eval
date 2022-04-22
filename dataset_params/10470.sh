@@ -5,7 +5,7 @@ CONDA_ENVS="/gpfs/slayman/pi/gerstein/cjc255/conda_envs"
 
 # paths
 USER_ID="sjs264"
-DATASET_ID="10470"
+DATASET_ID="10470_full"
 DATASET_HOME="/gpfs/gibbs/pi/gerstein/${USER_ID}/imppel/${DATASET_ID}"
 UTIL_SCRIPT_DIR="/gpfs/gibbs/pi/gerstein/sjs264/imppel/docs/scripts/"
 PICKER_INSTALL_DIR="/gpfs/slayman/pi/gerstein/cjc255/tools/"
