@@ -5,7 +5,6 @@ import numpy as np
 from tqdm import tqdm
 from PIL import Image
 from pathlib import Path
-import mrcfile
 import warnings
 from common import *
 
@@ -48,7 +47,7 @@ if __name__ == "__main__":
     a.o.mkdir(parents=True, exist_ok=True)
 
     for mrc_path in tqdm(a.mrc):
-        out_path = a.o / mrc_path.stem + "." + a.f
+        out_path = a.o / str(mrc_path.stem + "." + a.f)
         if out_path.is_file() and not a.force:
             log(f"skipping {mrc_path} (re-run with --force to allow overwriting)")
             continue
