@@ -9,11 +9,11 @@ import warnings
 from common import *
 
 
-def _save_to_img(arr, save_path=None):
+def save_to_img(arr, save_path=None):
     scaled = (arr * 255 / np.max(arr)).astype(np.uint8)  # scale to 0...255
     png = Image.fromarray(scaled)
     if save_path:
-        png.save(save_path)        
+        png.save(save_path)
     return png
 
 
@@ -50,6 +50,6 @@ if __name__ == "__main__":
             log(f"skipping {mrc_path} (re-run with --force to allow overwriting)")
             continue
         mrc = read_mrc(Path(mrc_path).resolve())
-        _save_to_img(mrc, save_path=out_path)
+        save_to_img(mrc, save_path=out_path)
 
     log(f"Done. Output is in {a.o}")
