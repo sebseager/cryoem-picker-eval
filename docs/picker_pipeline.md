@@ -214,14 +214,14 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/imppel/
 
 # convert general particles to box
 mkdir -p ${DATASET_HOME}/relion/cryolo/general/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/cryolo/general/STAR/*.star -o ${DATASET_HOME}/relion/cryolo/general/BOX -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/cryolo/general/STAR/*.star ${DATASET_HOME}/relion/cryolo/general/BOX -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
 
 # score general model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/cryolo/general/BOX/*.box &> ${DATASET_HOME}/relion/cryolo/general/particle_set_comp.txt
 
 # convert refined particles to box
 mkdir -p ${DATASET_HOME}/relion/cryolo/refined/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/cryolo/refined/STAR/*.star -o ${DATASET_HOME}/relion/cryolo/refined/BOX -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/cryolo/refined/STAR/*.star ${DATASET_HOME}/relion/cryolo/refined/BOX -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
 
 # score refined model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/cryolo/refined/BOX/*.box &> ${DATASET_HOME}/relion/cryolo/refined/particle_set_comp.txt
@@ -262,7 +262,7 @@ topaz preprocess -s ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/refined/train
 
 # convert train particles to topaz input format
 mkdir -p ${DATASET_HOME}/relion/topaz/refined/train_annot/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/train_annot/*.box -o ${DATASET_HOME}/relion/topaz/refined/train_annot/ -f box -t box -b ${EMAN_BOXSIZE_PIX} --round 0 -s ""
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/train_annot/*.box ${DATASET_HOME}/relion/topaz/refined/train_annot/ -f box -t box -b ${EMAN_BOXSIZE_PIX} --round 0 -s ""
 topaz convert -s ${TOPAZ_SCALE} ${DATASET_HOME}/relion/topaz/refined/train_annot/*.box -o ${DATASET_HOME}/relion/topaz/refined/train_particles.txt
 
 # preprocess validation micrographs
@@ -270,7 +270,7 @@ topaz preprocess -s ${TOPAZ_SCALE} -o ${DATASET_HOME}/relion/topaz/refined/val_i
 
 # convert validation particles to topaz input format
 mkdir -p ${DATASET_HOME}/relion/topaz/refined/val_annot/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/val_annot/*.box -o ${DATASET_HOME}/relion/topaz/refined/val_annot/ -f box -t box -b ${EMAN_BOXSIZE_PIX} --round 0 -s ""
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/val_annot/*.box ${DATASET_HOME}/relion/topaz/refined/val_annot/ -f box -t box -b ${EMAN_BOXSIZE_PIX} --round 0 -s ""
 topaz convert -s ${TOPAZ_SCALE} ${DATASET_HOME}/relion/topaz/refined/val_annot/*.box -o ${DATASET_HOME}/relion/topaz/refined/val_particles.txt
 
 # run training
@@ -416,7 +416,7 @@ cat << END > ${DATASET_HOME}/relion/aspire/run_submit.script
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/aspire
 
 # this script is a wrapper for APPLE picker and bypasses the ASPIRE config system
-python ${UTIL*SCRIPT_DIR}/../pickers/aspire/apple_cli.py ${DATASET_HOME}/relion/aspire/test_img_downsampled/*.mrc -o ${DATASET*HOME}/relion/aspire/STAR/ --particle_size ${ASPIRE_BOXSIZE_PIX} --max_particle_size $((ASPIRE_BOXSIZE_PIX * 2)) --min_particle_size $((ASPIRE_BOXSIZE_PIX / 4)) --minimum_overlap_amount $((ASPIRE_BOXSIZE_PIX / 10)) --query_image_size ${QUERY_IMAGE_SIZE} --tau1 ${TAU1} --tau2 ${TAU2} --container_size ${CONTAINER}
+python ${UTIL_SCRIPT_DIR}/../pickers/aspire/apple_cli.py ${DATASET_HOME}/relion/aspire/test_img_downsampled/*.mrc -o ${DATASET_HOME}/relion/aspire/STAR/ --particle_size ${ASPIRE_BOXSIZE_PIX} --max_particle_size $((ASPIRE_BOXSIZE_PIX * 2)) --min_particle_size $((ASPIRE_BOXSIZE_PIX / 4)) --minimum_overlap_amount $((ASPIRE_BOXSIZE_PIX / 10)) --query_image_size ${QUERY_IMAGE_SIZE} --tau1 ${TAU1} --tau2 ${TAU2} --container_size ${CONTAINER}
 END
 
 # run batch script
