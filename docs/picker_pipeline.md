@@ -496,7 +496,9 @@ mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
 python ${PICKER_INSTALL_DIR}/deeppicker/train.py --train_type 1 --train_inputDir ${DATASET_HOME}/relion/deeppicker/train/ --particle_size ${EMAN_BOXSIZE_PIX} --coordinate_symbol "" --model_retrain --model_load_file ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --model_save_dir ${DATASET_HOME}/relion/deeppicker/refined/ --model_save_file model_demo_type3_refined
 ```
 
-Run batch script to pick particles using trained model
+Run batch script to pick particles using trained model.
+
+_Note that the output of this picking job may contain an error to the effect that the given model file cannot be found. This is expected, as the error comes from a direct file path check, while the tensorflow saver module both writes and reads back files with various extensions appended to the model name._
 
 ```bash
 # write batch script
