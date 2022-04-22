@@ -335,7 +335,7 @@ Convert micrographs to PNG images
 python ${UTIL_SCRIPT_DIR}/mrc_to_img.py ${DATASET_HOME}/relion/test_img/*.mrc -f png -o ${DATASET_HOME}/pngs
 ```
 
-Pick particles using batch job (general model only)
+Pick particles using batch job (general model only). **Note: this must be run on a GPU!**
 
 ```bash
 # make output directory
@@ -387,7 +387,7 @@ echo "general" $(tail -1 ${DATASET_HOME}/relion/autocryopicker/general/particle_
 
 ## ASPIRE APPLE-picker
 
-Automated picking (general model only)
+Automated picking (general model only). **Note: this must be run on a GPU!**
 
 ```bash
 # make output directory
@@ -463,7 +463,7 @@ git clone https://github.com/nejyeah/DeepPicker-python.git ${PICKER_INSTALL_DIR}
 cp YOUR/PATH/TO/patches/deeppicker/*.py ${PICKER_INSTALL_DIR}/deeppicker
 ```
 
-Pick particles with general model
+Pick particles with general model. **Note: this must be run on a GPU!**
 
 ```bash
 # activate environment
@@ -476,7 +476,7 @@ mkdir -p ${DATASET_HOME}/relion/deeppicker/general/STAR/
 python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/relion/test_img/ --pre_trained_model ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/general/STAR/ --coordinate_symbol _deeppicker --threshold 0.5
 ```
 
-Train model from scratch
+Train model from scratch. **Note: this must be run on a GPU!**
 
 ```bash
 # make output directories
@@ -496,7 +496,7 @@ mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
 python ${PICKER_INSTALL_DIR}/deeppicker/train.py --train_type 1 --train_inputDir ${DATASET_HOME}/relion/deeppicker/train/ --particle_size ${EMAN_BOXSIZE_PIX} --coordinate_symbol "" --model_retrain --model_load_file ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --model_save_dir ${DATASET_HOME}/relion/deeppicker/refined/ --model_save_file model_demo_type3_refined
 ```
 
-Run batch script to pick particles using trained model.
+Run batch script to pick particles using trained model. **Note: this must be run on a GPU!**
 
 _Note that the output of this picking job may contain an error to the effect that the given model file cannot be found. This is expected, as the error comes from a direct file path check, while the tensorflow saver module both writes and reads back files with various extensions appended to the model name._
 
@@ -570,7 +570,7 @@ conda create -n parsed -c conda-forge python=3.6 h5py=2.7.1 keras=2.0.8 numba=0.
 conda activate parsed
 ```
 
-Pick particles with PARSED (general model only)
+Pick particles with PARSED (general model only). **Note: this must be run on a GPU!**
 
 ```bash
 # make output directory
