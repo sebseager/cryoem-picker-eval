@@ -56,3 +56,12 @@ ASPIRE_BOXSIZE_PIX=24
 # - patches/: cassper patches, currently not uploaded to Seb's github
 # - TSaved/: cassper general model source code
 CASSPER_UTIL="/gpfs/gibbs/pi/gerstein/dp823/cassper_util/"
+
+EMAN_BOXSIZE_A=$(echo "$EMAN_BOXSIZE_PIX * $ANG_PIX_RES / 1" | bc)
+QUERY_IMAGE_SIZE=$ASPIRE_BOXSIZE_PIX
+QBOX=$(((((4000 / ASPIRE_SCALE) ** 2) / (QUERY_IMAGE_SIZE ** 2)) * 4))
+TAU1=$((QBOX / 33))
+TAU1=${TAU1%.*}
+TAU2=$((QBOX / 3))
+TAU2=${TAU2%.*}
+CONTAINER=$((450 / ASPIRE_SCALE))
