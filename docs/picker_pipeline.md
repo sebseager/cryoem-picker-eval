@@ -465,9 +465,9 @@ cat << END > ${DATASET_HOME}/relion/autocryopicker/run_submit.script
 module load MATLAB/2020b
 sleep 5s
 
-cd ${PICKER_INSTALL_DIR}/AutoCryoPicker//Signle\ Particle\ Detection_Demo/
+cd ${PICKER_INSTALL_DIR}/AutoCryoPicker/Signle\ Particle\ Detection_Demo/
 out_dir=${DATASET_HOME}/relion/autocryopicker/BOX/
-for f in ${DATASET_HOME}/pngs/\*.png; do
+for f in ${DATASET_HOME}/pngs/*.png; do
     out_name=\$(basename \$f)
     label_file="\${out_dir}/\${out_name%.png}.box"
     matlab -nosplash -nodisplay -r "mrc='\$f';out_dir='\$out_dir';AutoPicker_Final_Demo" -logfile "\$label_file"
