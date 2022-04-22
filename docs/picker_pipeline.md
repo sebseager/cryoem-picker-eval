@@ -352,7 +352,7 @@ cat << END > ${DATASET_HOME}/relion/autocryopicker/run_submit.script
 #SBATCH --time=4:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
-#SBATCH --output=slurm-%j.out
+#SBATCH --output=${DATASET_HOME}/relion/autocryopicker/slurm-%j.out
 
 module load MATLAB/2020b
 sleep 5s
@@ -368,7 +368,7 @@ done
 END
 
 # submit the script
-(cd ${DATASET_HOME}/relion/autocryopicker && sbatch run_submit.script)
+sbatch ${DATASET_HOME}/relion/autocryopicker/run_submit.script
 ```
 
 Score model
@@ -411,7 +411,7 @@ cat << END > ${DATASET_HOME}/relion/aspire/run_submit.script
 #SBATCH --time=4:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
-#SBATCH --output=slurm-%j.out
+#SBATCH --output=${DATASET_HOME}/relion/aspire/slurm-%j.out
 
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/aspire
 
@@ -420,7 +420,7 @@ python ${UTIL*SCRIPT_DIR}/../pickers/aspire/apple_cli.py ${DATASET_HOME}/relion/
 END
 
 # run batch script
-(cd ${DATASET_HOME}/relion/aspire && sbatch run_submit.script)
+sbatch ${DATASET_HOME}/relion/aspire/run_submit.script
 ```
 
 Postprocess particles
@@ -509,7 +509,7 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/refined/run_submit.script
 #SBATCH --time=4:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
-#SBATCH --output=slurm-%j.out
+#SBATCH --output=${DATASET_HOME}/relion/deeppicker/slurm-%j.out
 
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
 
@@ -517,7 +517,7 @@ python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/r
 END
 
 # submit script
-(cd ${DATASET_HOME}/relion/deeppicker/refined && sbatch run_submit.script)
+sbatch ${DATASET_HOME}/relion/deeppicker/refined/run_submit.script
 ```
 
 Score model
@@ -588,7 +588,7 @@ cat << END > ${DATASET_HOME}/relion/parsed/run_submit.script
 #SBATCH --time=4:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
-#SBATCH --output=slurm-%j.out
+#SBATCH --output=${DATASET_HOME}/relion/parsed/slurm-%j.out
 
 module load CUDA/8.0.61
 sleep 5s
@@ -602,7 +602,7 @@ python -W ignore parsed_main.py --model=pre_train_model.h5 --data_path=${DATASET
 END
 
 # submit script
-(cd ${DATASET_HOME}/relion/parsed && sbatch run_submit.script)
+sbatch ${DATASET_HOME}/relion/parsed/run_submit.script
 ```
 
 Plot distribution of detected particles
