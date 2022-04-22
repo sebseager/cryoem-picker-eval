@@ -493,8 +493,6 @@ python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/val_annot/*.
 
 # train model from scratch
 mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
-
-# train model from scratch
 python ${PICKER_INSTALL_DIR}/deeppicker/train.py --train_type 1 --train_inputDir ${DATASET_HOME}/relion/deeppicker/train/ --particle_size ${EMAN_BOXSIZE_PIX} --coordinate_symbol "" --model_retrain --model_load_file ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --model_save_dir ${DATASET_HOME}/relion/deeppicker/refined/ --model_save_file model_demo_type3_refined
 ```
 
