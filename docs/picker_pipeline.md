@@ -349,7 +349,7 @@ cat << END > ${DATASET_HOME}/relion/autocryopicker/run_submit.script
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=12G
-#SBATCH --time=1:00:00
+#SBATCH --time=4:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
 #SBATCH --output=${DATASET_HOME}/relion/autocryopicker/slurm-%j.out
@@ -408,7 +408,7 @@ cat << END > ${DATASET_HOME}/relion/aspire/run_submit.script
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
-#SBATCH --time=1:00:00
+#SBATCH --time=4:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
 #SBATCH --output=${DATASET_HOME}/relion/aspire/slurm-%j.out
@@ -585,7 +585,7 @@ cat << END > ${DATASET_HOME}/relion/parsed/run_submit.script
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G
-#SBATCH --time=1:00:00
+#SBATCH --time=4:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
 #SBATCH --output=${DATASET_HOME}/relion/parsed/slurm-%j.out
