@@ -392,10 +392,9 @@ if __name__ == "__main__":
         "input", help="Path(s) to input particle coordinates", nargs="+"
     )
     parser.add_argument(
-        "-o",
+        "out_dir",
         help="Output directory in which to store generated coordinate files (will be "
         "created if it does not exist)",
-        required=True,
     )
     parser.add_argument(
         "-f",
