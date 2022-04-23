@@ -501,7 +501,7 @@ mkdir -p ${DATASET_HOME}/relion/autocryopicker/BOX/
 # process everything at once by default
 mrc_files="${DATASET_HOME}/relion/test_img/*.mrc"
 
-i=0
+i=1
 ```
 
 At this point you have two options: either process all micrographs at once, or process them in groups (as determined by the subdirectories within `${DATASET_HOME}/relion/test_img_groups/`, generated towards the top of this file). If you have more than about 1,000 micrographs, you should probably process them in groups.
@@ -606,7 +606,7 @@ mkdir -p ${DATASET_HOME}/relion/deeppicker/general/STAR/
 # process everything at once by default
 mrc_dir=${DATASET_HOME}/relion/test_img/
 
-i=0
+i=1
 ```
 
 At this point you have two options: either process all micrographs at once, or process them in groups (as determined by the subdirectories within `${DATASET_HOME}/relion/test_img_groups/`, generated towards the top of this file). If you have more than about 1,000 micrographs, you should probably process them in groups.
@@ -695,7 +695,7 @@ mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
 # process everything at once by default
 mrc_dir=${DATASET_HOME}/relion/test_img/
 
-i=0
+i=1
 ```
 
 At this point you have two options: either process all micrographs at once, or process them in groups (as determined by the subdirectories within `${DATASET_HOME}/relion/test_img_groups/`, generated towards the top of this file). If you have more than about 1,000 micrographs, you should probably process them in groups.
