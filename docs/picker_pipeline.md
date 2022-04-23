@@ -536,7 +536,7 @@ mkdir -p \${out_dir}
 for f in \$(eval ls ${mrc_files}); do
     bn=\$(basename -- \$f)
     png=${DATASET_HOME}/pngs/\${bn%.*}.png
-    label_file="\${out_dir}/\${bn%.png}.box"
+    label_file="\${out_dir}/\${bn%.*}.box"
 
     # make sure png exists
     if [ ! -f \${png} ]; then
