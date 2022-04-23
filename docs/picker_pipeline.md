@@ -95,9 +95,9 @@ cd ${DATASET_HOME}/relion
 mv *.${GT_SUFFIX} ${DATASET_HOME}/ground_truth/
 ```
 
-## Motion correction (only if necessary)
+## Motion correction (if necessary)
 
-Skip this section if the micrographs downloaded from EMPIAR were already motion corrected (i.e., each `*.mrc` file is a single image, as opposed to an image stack or "movie").
+Motion correction can be skipped if the micrographs downloaded from EMPIAR were already motion corrected (i.e., each `*.mrc` file is a single image, as opposed to an image stack or "movie").
 
 **Note: this must be run on a GPU node!**
 
@@ -148,6 +148,33 @@ eval ls ${GT_FILES} | head -10 | tail -2 | xargs -n 1 -I {} python ${UTIL_SCRIPT
 # test set
 eval ls ${MRC_FILES} | tail -10 | xargs -n 1 -I {} cp -s --target-directory=${DATASET_HOME}/relion/test_img/ {}
 eval ls ${GT_FILES} | tail -10 | xargs -n 1 -I {} python ${UTIL_SCRIPT_DIR}/coord_converter.py {} ${DATASET_HOME}/relion/test_annot/ -f ${GT_SUFFIX} -t box -b ${EMAN_BOXSIZE_PIX} -s ""
+```
+
+## Create micrograph groups for test set
+
+Some particle pickers can take a long time (i.e., over 45 seconds) to process each micrograph. This can lead to unacceptably long compute times for datasets with several thousand micrographs. To address that, we create a separate directory with test set micrographs linked in groups. Each group can be processed in parallel, reducing overall compute time.
+
+```bash
+# take *.mrc files from here
+in_dir=${DATASET_HOME}/relion/test_img/
+
+# and group them into subdirectories within here
+out_dir=${DATASET_HOME}/relion/test_img_groups/
+
+# number of micrographs per each group (last group may be smaller)
+n_per_group=500
+
+# split micrographs into subdirectories
+i=0
+for f in ${in_dir}/*.mrc; do
+  bn=$(basename ${f})
+  sub_dir=${out_dir}/group_$(printf %03d $((i/n_per_group+1)))
+  mkdir -p ${sub_dir} && ln -s ${f} ${sub_dir}/${bn}
+  ((i+=1))
+done
+
+# check that all micrographs were assigned to a group (should be equal)
+echo "orig" $(ls ${in_dir}/*.mrc | wc -l) "groups" $(ls ${out_dir}/*/*.mrc | wc -l)
 ```
 
 ## crYOLO
