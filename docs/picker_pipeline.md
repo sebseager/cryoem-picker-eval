@@ -533,7 +533,7 @@ out_dir=${DATASET_HOME}/relion/autocryopicker/BOX/${i}/
 mkdir -p ${out_dir}
 
 # process each png one by one
-for f in $(eval ls ${mrc_files}); do
+for f in \$(eval ls ${mrc_files}); do
     bn=\$(basename -- \$f)
     png=${DATASET_HOME}/pngs/\${bn%.*}.png
     label_file="\${out_dir}/\${bn%.png}.box"
