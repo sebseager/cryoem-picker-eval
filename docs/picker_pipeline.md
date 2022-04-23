@@ -155,10 +155,10 @@ eval ls ${GT_FILES} | tail -10 | xargs -n 1 -I {} python ${UTIL_SCRIPT_DIR}/coor
 Some particle pickers can take a long time (i.e., over 45 seconds) to process each micrograph. This can lead to unacceptably long compute times for datasets with several thousand micrographs. To address that, we create a separate directory with test set micrographs linked in groups. Each group can be processed in parallel, reducing overall compute time.
 
 ```bash
-# take *.mrc files from here
-in_dir=${DATASET_HOME}/relion/test_img/
+# input files to group as a glob
+in_files="${DATASET_HOME}/relion/test_img/*.mrc"
 
-# and group them into subdirectories within here
+# and group them into subdirectories within here (should be a new directory)
 out_dir=${DATASET_HOME}/relion/test_img_groups/
 
 # number of micrographs per each group (last group may be smaller)
@@ -166,7 +166,7 @@ n_per_group=500
 
 # split micrographs into subdirectories
 i=0
-for f in ${in_dir}/*.mrc; do
+for f in $(eval ls ${in_files}); do
   bn=$(basename ${f})
   sub_dir=${out_dir}/group_$(printf %03d $((i/n_per_group+1)))
   mkdir -p ${sub_dir} && ln -s ${f} ${sub_dir}/${bn}
@@ -174,7 +174,7 @@ for f in ${in_dir}/*.mrc; do
 done
 
 # check that all micrographs were assigned to a group (should be equal)
-echo "orig" $(ls ${in_dir}/*.mrc | wc -l) "groups" $(ls ${out_dir}/*/*.mrc | wc -l)
+echo "orig" $(ls ${in_files} | wc -l) "groups" $(ls ${out_dir}/*/*.* | wc -l)
 ```
 
 ## crYOLO
@@ -461,30 +461,65 @@ Installation and patching
 git clone https://github.com/jianlin-cheng/AutoCryoPicker.git ${PICKER_INSTALL_DIR}/AutoCryoPicker/
 
 # apply our patch
-cp YOUR/PATH/TO/patches/autocryopicker/AutoPicker_Final_Demo.m ${PICKER_INSTALL_DIR}/AutoCryoPicker//Signle\ Particle\ Detection_Demo/AutoPicker_Final_Demo.m
+cp YOUR/PATH/TO/patches/autocryopicker/AutoPicker_Final_Demo.m ${PICKER_INSTALL_DIR}/AutoCryoPicker/Signle\ Particle\ Detection_Demo/AutoPicker_Final_Demo.m
 ```
 
 Convert micrographs to PNG images
 
 ```bash
+# write slurm batch job
+cat << END > ${DATASET_HOME}/relion/autocryopicker/run_make_pngs.script
+#!/bin/bash
+#SBATCH --job-name=mrc_to_png
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=12G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein
+#SBATCH --output=${DATASET_HOME}/relion/autocryopicker/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/imppel
+
+# convert all test micrographs to pngs
 python ${UTIL_SCRIPT_DIR}/mrc_to_img.py ${DATASET_HOME}/relion/test_img/*.mrc -f png -o ${DATASET_HOME}/pngs
+END
+
+# submit the script
+sbatch ${DATASET_HOME}/relion/autocryopicker/run_make_pngs.script
 ```
 
 Pick particles (general model only). **Note: this must be run on a GPU!**
+
+Run this first to set things up.
 
 ```bash
 # make output directory
 mkdir -p ${DATASET_HOME}/relion/autocryopicker/BOX/
 
+# process everything at once by default
+mrc_files="${DATASET_HOME}/relion/test_img/*.mrc"
+
+i=0
+```
+
+At this point you have two options: either process all micrographs at once, or process them in groups (as determined by the subdirectories within `${DATASET_HOME}/relion/test_img_groups/`, generated towards the top of this file). If you have more than about 1,000 micrographs, you should probably process them in groups.
+
+To process all micrographs at once, just copy the batch script (between `cat << END` and `END`) and submit it as is. To process micrographs in groups, copy everything below, submitting all the created batch scripts (one per group).
+
+```bash
+for group in ${DATASET_HOME}/relion/test_img_groups/group_*; do mrc_files="${group}/*.mrc";
+
 # write slurm batch job
-cat << END > ${DATASET_HOME}/relion/autocryopicker/run_submit.script
+cat << END > ${DATASET_HOME}/relion/autocryopicker/run_submit_${i}.script
 #!/bin/bash
-#SBATCH --job-name=autocryopicker
+#SBATCH --job-name=autocryopicker_${i}
 #SBATCH -N1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
-#SBATCH --time=5:00:00
+#SBATCH --time=1-
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
 #SBATCH --output=${DATASET_HOME}/relion/autocryopicker/slurm-%j.out
@@ -497,20 +532,30 @@ cd ${PICKER_INSTALL_DIR}/AutoCryoPicker/Signle\ Particle\ Detection_Demo/
 out_dir=${DATASET_HOME}/relion/autocryopicker/BOX/
 
 # process each png one by one
-for f in ${DATASET_HOME}/pngs/*.png; do
-    out_name=\$(basename \$f)
-    label_file="\${out_dir}/\${out_name%.png}.box"
+for f in $(eval ls ${mrc_files}); do
+    bn=\$(basename -- \$f)
+    png=${DATASET_HOME}/pngs/\${bn%.*}.png
+    label_file="\${out_dir}/\${bn%.png}.box"
+
+    # make sure png exists
+    if [ ! -f \${png} ]; then
+        echo "png \${png} does not exist"
+        continue
+    fi
 
     # run picker
-    matlab -nosplash -nodisplay -r "mrc='\$f';out_dir='\$out_dir';AutoPicker_Final_Demo" -logfile "\$label_file"
+    matlab -nosplash -nodisplay -r "mrc='\$png';out_dir='\$out_dir';AutoPicker_Final_Demo" -logfile "\$label_file"
 
     # convert stdout to box file
     awk '/AUTOCRYOPICKER_DETECTIONS_START/ ? c++ : c' \${label_file} > \${label_file/.box/.tmp} && mv \${label_file/.box/.tmp} \${label_file}
 done
 END
 
+((i+=1))
+done
+
 # submit the script
-sbatch ${DATASET_HOME}/relion/autocryopicker/run_submit.script
+sbatch ${DATASET_HOME}/relion/autocryopicker/run_submit_*.script
 ```
 
 Score model
@@ -530,73 +575,6 @@ python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_ann
 echo "general" $(tail -1 ${DATASET_HOME}/relion/autocryopicker/general/particle_set_comp.txt)
 ```
 
-## ASPIRE APPLE-picker
-
-Automated picking (general model only). **Note: this must be run on a GPU!**
-
-```bash
-# make output directory
-mkdir -p ${DATASET_HOME}/relion/aspire/STAR/
-
-# rescale micrographs
-mkdir -p ${DATASET_HOME}/relion/aspire/test_img_downsampled/
-for input in ${DATASET_HOME}/relion/test_img/*.mrc; do
-    basename=${input##*/}
-    singularity exec /gpfs/ysm/datasets/cryoem/eman2.3_ubuntu18.04.sif e2proc2d.py --meanshrink=${ASPIRE_SCALE} ${input} ${DATASET_HOME}/relion/aspire/test_img_downsampled/${basename}
-done
-
-# write batch script to process all micrographs
-cat << END > ${DATASET_HOME}/relion/aspire/run_submit.script
-#!/bin/bash
-#SBATCH --job-name=aspire
-#SBATCH -N1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
-#SBATCH --time=5:00:00
-#SBATCH -p pi_gerstein_gpu
-#SBATCH --gres=gpu:1
-#SBATCH --output=${DATASET_HOME}/relion/aspire/slurm-%j.out
-
-# activate environment
-source ${CONDA_ACTIVATE} ${CONDA_ENVS}/aspire
-
-# this script is a wrapper for APPLE picker and bypasses the ASPIRE config system
-python ${UTIL_SCRIPT_DIR}/../pickers/aspire/apple_cli.py ${DATASET_HOME}/relion/aspire/test_img_downsampled/*.mrc -o ${DATASET_HOME}/relion/aspire/STAR/ --particle_size ${ASPIRE_BOXSIZE_PIX} --max_particle_size $((ASPIRE_BOXSIZE_PIX * 2)) --min_particle_size $((ASPIRE_BOXSIZE_PIX / 4)) --minimum_overlap_amount $((ASPIRE_BOXSIZE_PIX / 10)) --query_image_size ${QUERY_IMAGE_SIZE} --tau1 ${TAU1} --tau2 ${TAU2} --container_size ${CONTAINER}
-END
-
-# run batch script
-sbatch ${DATASET_HOME}/relion/aspire/run_submit.script
-```
-
-Postprocess particles
-
-```bash
-# convert from STAR to BOX format
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/aspire/STAR/*.star ${DATASET_HOME}/relion/aspire/tmp/ -f star -t box -b ${ASPIRE_BOXSIZE_PIX} --force --round 0
-
-# upsample particle coordinates using topaz's scaling utility
-source ${CONDA_ACTIVATE} ${CONDA_ENVS}/topaz
-mkdir -p ${DATASET_HOME}/relion/aspire/BOX/
-for input in ${DATASET_HOME}/relion/aspire/tmp/*.box; do
-    topaz convert ${input} -o ${DATASET_HOME}/relion/aspire/BOX/ --up-scale ${ASPIRE_SCALE} --to box --boxsize ${EMAN_BOXSIZE_PIX}
-done
-
-# remove unscaled boxfiles
-rm -rf ${DATASET_HOME}/relion/aspire/tmp/
-```
-
-Score model
-
-```bash
-# activate evaluation environment
-conda deactivate
-source ${CONDA_ACTIVATE} ${CONDA_ENVS}/imppel/
-
-# compare particle picks against ground ground truth
-python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/aspire/BOX/*.box &> ${DATASET_HOME}/relion/aspire/particle_set_comp.txt
-```
-
 ## DeepPicker
 
 Installation and patching
@@ -611,14 +589,29 @@ cp YOUR/PATH/TO/patches/deeppicker/*.py ${PICKER_INSTALL_DIR}/deeppicker
 
 Pick particles with general model. **Note: this must be run on a GPU!**
 
+Run this first to set things up.
+
 ```bash
 # make output directories
 mkdir -p ${DATASET_HOME}/relion/deeppicker/general/STAR/
 
+# process everything at once by default
+mrc_dir=${DATASET_HOME}/relion/test_img/
+
+i=0
+```
+
+At this point you have two options: either process all micrographs at once, or process them in groups (as determined by the subdirectories within `${DATASET_HOME}/relion/test_img_groups/`, generated towards the top of this file). If you have more than about 1,000 micrographs, you should probably process them in groups.
+
+To process all micrographs at once, just copy the batch script (between `cat << END` and `END`) and submit it as is. To process micrographs in groups, copy everything below, submitting all the created batch scripts (one per group).
+
+```bash
+for mrc_dir in ${DATASET_HOME}/relion/test_img_groups/group_*; do
+
 # write slurm batch job
-cat << END > ${DATASET_HOME}/relion/deeppicker/general/run_submit.script
+cat << END > ${DATASET_HOME}/relion/deeppicker/general/run_submit_${i}.script
 #!/bin/bash
-#SBATCH --job-name=deeppicker_general
+#SBATCH --job-name=deeppicker_general_${i}
 #SBATCH -N1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
@@ -632,11 +625,14 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/general/run_submit.script
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
 
 # pick with general model
-python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/relion/test_img/ --pre_trained_model ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/general/STAR/ --coordinate_symbol _deeppicker --threshold 0.5
+python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${mrc_dir} --pre_trained_model ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/general/STAR/ --coordinate_symbol _deeppicker --threshold 0.5
 END
 
+((i+=1))
+done
+
 # run batch script
-sbatch ${DATASET_HOME}/relion/deeppicker/general/run_submit.script
+sbatch ${DATASET_HOME}/relion/deeppicker/general/run_submit_*.script
 ```
 
 Train model from scratch. **Note: this must be run on a GPU!**
@@ -645,7 +641,6 @@ Train model from scratch. **Note: this must be run on a GPU!**
 # make output directories
 mkdir -p ${DATASET_HOME}/relion/deeppicker/train/
 mkdir -p ${DATASET_HOME}/relion/deeppicker/val/
-mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
 
 # write slurm batch job
 cat << END > ${DATASET_HOME}/relion/deeppicker/refined/train_submit.script
@@ -683,11 +678,29 @@ Pick particles using trained model. **Note: this must be run on a GPU!**
 
 _Note that the output of this picking job may contain an error to the effect that the given model file cannot be found. This is expected, as the error comes from a direct file path check, while the tensorflow saver module both writes and reads back files with various extensions appended to the model name._
 
+Run this first to set things up.
+
 ```bash
+# make output directories
+mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/STAR/
+
+# process everything at once by default
+mrc_dir=${DATASET_HOME}/relion/test_img/
+
+i=0
+```
+
+At this point you have two options: either process all micrographs at once, or process them in groups (as determined by the subdirectories within `${DATASET_HOME}/relion/test_img_groups/`, generated towards the top of this file). If you have more than about 1,000 micrographs, you should probably process them in groups.
+
+To process all micrographs at once, just copy the batch script (between `cat << END` and `END`) and submit it as is. To process micrographs in groups, copy everything below, submitting all the created batch scripts (one per group).
+
+```bash
+for mrc_dir in ${DATASET_HOME}/relion/test_img_groups/group_*; do
+
 # write slurm batch job
-cat << END > ${DATASET_HOME}/relion/deeppicker/refined/run_submit.script
+cat << END > ${DATASET_HOME}/relion/deeppicker/refined/run_submit_${i}.script
 #!/bin/bash
-#SBATCH --job-name=deeppicker_refined
+#SBATCH --job-name=deeppicker_refined_${i}
 #SBATCH --mem=16G
 #SBATCH --time=5:00:00
 #SBATCH -p pi_gerstein_gpu
@@ -696,11 +709,14 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/refined/run_submit.script
 
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
 
-python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${DATASET_HOME}/relion/test_img/ --pre_trained_model ${DATASET_HOME}/relion/deeppicker/refined/model_demo_type3_refined --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/refined/STAR/ --coordinate_symbol _deeppicker --threshold 0.5
+python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${mrc_dir} --pre_trained_model ${DATASET_HOME}/relion/deeppicker/refined/model_demo_type3_refined --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/refined/STAR/ --coordinate_symbol _deeppicker --threshold 0.5
 END
 
+((i+=1))
+done
+
 # submit script
-sbatch ${DATASET_HOME}/relion/deeppicker/refined/run_submit.script
+sbatch ${DATASET_HOME}/relion/deeppicker/refined/run_submit_*.script
 ```
 
 Score model
@@ -823,6 +839,73 @@ python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_ann
 
 # print scores
 echo "general" $(tail -1 ${DATASET_HOME}/relion/parsed/general/particle_set_comp.txt)
+```
+
+## ASPIRE APPLE-picker
+
+Automated picking (general model only). **Note: this must be run on a GPU!**
+
+```bash
+# make output directory
+mkdir -p ${DATASET_HOME}/relion/aspire/STAR/
+
+# rescale micrographs
+mkdir -p ${DATASET_HOME}/relion/aspire/test_img_downsampled/
+for input in ${DATASET_HOME}/relion/test_img/*.mrc; do
+    basename=${input##*/}
+    singularity exec /gpfs/ysm/datasets/cryoem/eman2.3_ubuntu18.04.sif e2proc2d.py --meanshrink=${ASPIRE_SCALE} ${input} ${DATASET_HOME}/relion/aspire/test_img_downsampled/${basename}
+done
+
+# write batch script to process all micrographs
+cat << END > ${DATASET_HOME}/relion/aspire/run_submit.script
+#!/bin/bash
+#SBATCH --job-name=aspire
+#SBATCH -N1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=5:00:00
+#SBATCH -p pi_gerstein_gpu
+#SBATCH --gres=gpu:1
+#SBATCH --output=${DATASET_HOME}/relion/aspire/slurm-%j.out
+
+# activate environment
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/aspire
+
+# this script is a wrapper for APPLE picker and bypasses the ASPIRE config system
+python ${UTIL_SCRIPT_DIR}/../pickers/aspire/apple_cli.py ${DATASET_HOME}/relion/aspire/test_img_downsampled/*.mrc -o ${DATASET_HOME}/relion/aspire/STAR/ --particle_size ${ASPIRE_BOXSIZE_PIX} --max_particle_size $((ASPIRE_BOXSIZE_PIX * 2)) --min_particle_size $((ASPIRE_BOXSIZE_PIX / 4)) --minimum_overlap_amount $((ASPIRE_BOXSIZE_PIX / 10)) --query_image_size ${QUERY_IMAGE_SIZE} --tau1 ${TAU1} --tau2 ${TAU2} --container_size ${CONTAINER}
+END
+
+# run batch script
+sbatch ${DATASET_HOME}/relion/aspire/run_submit.script
+```
+
+Postprocess particles
+
+```bash
+# convert from STAR to BOX format
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/aspire/STAR/*.star ${DATASET_HOME}/relion/aspire/tmp/ -f star -t box -b ${ASPIRE_BOXSIZE_PIX} --force --round 0
+
+# upsample particle coordinates using topaz's scaling utility
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/topaz
+mkdir -p ${DATASET_HOME}/relion/aspire/BOX/
+for input in ${DATASET_HOME}/relion/aspire/tmp/*.box; do
+    topaz convert ${input} -o ${DATASET_HOME}/relion/aspire/BOX/ --up-scale ${ASPIRE_SCALE} --to box --boxsize ${EMAN_BOXSIZE_PIX}
+done
+
+# remove unscaled boxfiles
+rm -rf ${DATASET_HOME}/relion/aspire/tmp/
+```
+
+Score model
+
+```bash
+# activate evaluation environment
+conda deactivate
+source ${CONDA_ACTIVATE} ${CONDA_ENVS}/imppel/
+
+# compare particle picks against ground ground truth
+python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/aspire/BOX/*.box &> ${DATASET_HOME}/relion/aspire/particle_set_comp.txt
 ```
 
 ## RELION LoG Picker
