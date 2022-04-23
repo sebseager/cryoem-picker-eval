@@ -624,7 +624,7 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/general/run_submit_${i}.script
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
-#SBATCH --time=5:00:00
+#SBATCH --time=1-
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
 #SBATCH --output=${DATASET_HOME}/relion/deeppicker/general/slurm-%j.out
@@ -710,7 +710,7 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/refined/run_submit_${i}.script
 #!/bin/bash
 #SBATCH --job-name=deeppicker_refined_${i}
 #SBATCH --mem=16G
-#SBATCH --time=5:00:00
+#SBATCH --time=1-
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
 #SBATCH --output=${DATASET_HOME}/relion/deeppicker/refined/slurm-%j.out
