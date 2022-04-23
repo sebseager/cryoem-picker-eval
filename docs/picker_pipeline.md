@@ -556,7 +556,7 @@ END
 done
 
 # submit the script
-sbatch ${DATASET_HOME}/relion/autocryopicker/run_submit_*.script
+for f in ${DATASET_HOME}/relion/autocryopicker/run_submit_*.script; do sbatch $f; done
 ```
 
 Postprocessing
@@ -640,7 +640,7 @@ END
 done
 
 # run batch script
-sbatch ${DATASET_HOME}/relion/deeppicker/general/run_submit_*.script
+for f in ${DATASET_HOME}/relion/deeppicker/general/run_submit_*.script; do sbatch $f; done
 ```
 
 Train model from scratch. **Note: this must be run on a GPU!**
@@ -724,7 +724,7 @@ END
 done
 
 # submit script
-sbatch ${DATASET_HOME}/relion/deeppicker/refined/run_submit_*.script
+for f in ${DATASET_HOME}/relion/deeppicker/refined/run_submit_*.script; do sbatch $f; done
 ```
 
 Score model
