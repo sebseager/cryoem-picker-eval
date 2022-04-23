@@ -530,7 +530,7 @@ sleep 5s
 
 cd ${PICKER_INSTALL_DIR}/AutoCryoPicker/Signle\ Particle\ Detection_Demo/
 out_dir=${DATASET_HOME}/relion/autocryopicker/BOX/${i}/
-mkdir -p ${out_dir}
+mkdir -p \${out_dir}
 
 # process each png one by one
 for f in \$(eval ls ${mrc_files}); do
