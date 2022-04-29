@@ -633,7 +633,7 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/general/run_submit_${i}.script
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
 
 # pick with general model
-python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${mrc_dir} --pre_trained_model ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/general/STAR/ --coordinate_symbol _deeppicker --threshold 0.5
+python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${mrc_dir} --pre_trained_model ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/general/STAR/ --coordinate_symbol "" --threshold 0.5
 END
 
 ((i+=1))
@@ -717,7 +717,7 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/refined/run_submit_${i}.script
 
 source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
 
-python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${mrc_dir} --pre_trained_model ${DATASET_HOME}/relion/deeppicker/refined/model_demo_type3_refined --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/refined/STAR/ --coordinate_symbol _deeppicker --threshold 0.5
+python ${PICKER_INSTALL_DIR}/deeppicker/autoPick.py --inputDir ${mrc_dir} --pre_trained_model ${DATASET_HOME}/relion/deeppicker/refined/model_demo_type3_refined --particle_size ${EMAN_BOXSIZE_PIX} --mrc_number -1 --outputDir ${DATASET_HOME}/relion/deeppicker/refined/STAR/ --coordinate_symbol "" --threshold 0.5
 END
 
 ((i+=1))
@@ -781,7 +781,7 @@ Pick particles with PARSED (general model only). **Note: this must be run on a G
 
 ```bash
 # make output directory
-mkdir -p ${DATASET_HOME}/relion/parsed/STAR/
+mkdir -p ${DATASET_HOME}/relion/parsed/STAR_ALL/
 
 # write batch script to pick particles with general model
 # don't use blob thresholding (i.e., no data specific optimizations)
@@ -805,7 +805,7 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/parsed
 sleep 5s
 
 cd ${PICKER_INSTALL_DIR}/PARSED
-python -W ignore parsed_main.py --model=pre_train_model.h5 --data_path=${DATASET_HOME}/relion/test_img/ --output_path=${DATASET_HOME}/relion/parsed/STAR/ --file_pattern=*.mrc --job_suffix=parsed --angpixel=${ANG_PIX_RES} --img_size=${MRC_LONGSIDE_PIX} --edge_cut=0  --core_num=4 --aperture=${EMAN_BOXSIZE_A}
+python -W ignore parsed_main.py --model=pre_train_model.h5 --data_path=${DATASET_HOME}/relion/test_img/ --output_path=${DATASET_HOME}/relion/parsed/STAR_ALL/ --file_pattern=*.mrc --job_suffix=parsed --angpixel=${ANG_PIX_RES} --img_size=${MRC_LONGSIDE_PIX} --edge_cut=0 --core_num=4 --aperture=${EMAN_BOXSIZE_A}
 END
 
 # submit script
@@ -820,7 +820,7 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/parsed/
 
 # write distribution image
 cd ${PICKER_INSTALL_DIR}/PARSED
-python particle_mass.py drawmass --pick_output=${DATASET_HOME}/relion/parsed/STAR/ --job_suffix=parsed --tmp_hist=${DATASET_HOME}/relion/parsed/hist.png
+python particle_mass.py drawmass --pick_output=${DATASET_HOME}/relion/parsed/STAR_ALL/ --job_suffix=parsed --tmp_hist=${DATASET_HOME}/relion/parsed/hist.png
 
 # determine threshold
 #   1) open the image at ${DATASET_HOME}/relion/parsed/hist.png
@@ -828,7 +828,25 @@ python particle_mass.py drawmass --pick_output=${DATASET_HOME}/relion/parsed/STA
 #   3) if distribution is multimodal, assign a threshold to PARSED_THRES
 #      that will separate the two peaks
 PARSED_THRES=
-python particle_mass.py cutoff --pick_output=${DATASET_HOME}/relion/parsed/STAR/ --job_suffix=parsed --output_suffix=parsed_thres --thres=$PARSED_THRES
+python particle_mass.py cutoff --pick_output=${DATASET_HOME}/relion/parsed/STAR_ALL/ --job_suffix=parsed --output_suffix=parsed_thres --thres=$PARSED_THRES
+```
+
+Copy files to output directory and remove "\_parsed" suffix from STAR files
+
+```bash
+mkdir -p ${DATASET_HOME}/relion/parsed/STAR/
+
+# if thresholding was done
+cd ${DATASET_HOME}/relion/parsed/STAR_ALL
+for f in *_parsed_thres.star; do
+    cp $f ${DATASET_HOME}/relion/parsed/STAR/${f%._parsed_thres.star}.star
+done
+
+# if thresholding was not performed
+cd ${DATASET_HOME}/relion/parsed/STAR_ALL
+for f in *_parsed.star; do
+    cp $f ${DATASET_HOME}/relion/parsed/STAR/${f%._parsed.star}.star
+done
 ```
 
 Score model
@@ -839,8 +857,7 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/imppel/
 
 # convert general predictions to box
 mkdir -p ${DATASET_HOME}/relion/parsed/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/parsed/STAR/*_parsed.star ${DATASET_HOME}/relion/parsed/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --force
-rm -rf ${DATASET_HOME}/relion/parsed/STAR/
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/parsed/STAR/*.star ${DATASET_HOME}/relion/parsed/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --force
 
 # score general model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/parsed/BOX/*.box &> ${DATASET_HOME}/relion/parsed/particle_set_comp.txt
