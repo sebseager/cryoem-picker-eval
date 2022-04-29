@@ -507,7 +507,7 @@ if __name__ == "__main__":
         in_fmt=a.f,
         out_fmt=a.t,
         boxsize=a.b,
-        out_dir=a.o,
+        out_dir=a.out_dir,
         in_cols=a.c,
         out_col_order=a.d,
         suffix=a.s,
