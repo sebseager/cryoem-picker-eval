@@ -102,6 +102,22 @@ def read_boxfiles(file_matches, mrc_key="mrc"):
         boxes[name] = {}
         for mrc_path, boxfile_path in zip(file_matches[mrc_key], paths):
             df = tsv_to_df(boxfile_path, header_mode="infer")
+
+            # if df columns don't have names, infer column names
+            if all(df1.columns == range(len(df1.columns))):
+                n_cols = len(df.columns)
+                if n_cols == 4:
+                    df.columns = list(Box._fields[:-1])
+                elif n_cols == 5:
+                    df.columns = list(Box._fields)
+                elif n_cols < 4:
+                    log(f"box file needs at least 4 columns ({boxfile_path})", lvl=2)
+                    return
+                else:
+                    log(f"box file has {n_cols} columns; keeping the first 5", lvl=1)
+                    df = df.drop(list(range(5, n_cols)), axis=1)
+                    df.columns = list(Box._fields)
+
             try:
                 # Box._fields = ['x', 'y', 'w', 'h', 'conf']
                 new_boxes = [Box(*row) for row in df[list(Box._fields)].values]
@@ -125,7 +141,9 @@ if __name__ == "__main__":
         "--mrc path1 path2 ... --gt ... --picker1 ..."
     )
     parser.add_argument(
-        "out_dir", help="Output directory (will be created if it does not exist)"
+        "-o",
+        help="Output directory (will be created if it does not exist)",
+        required=True,
     )
     parser.add_argument(
         "--primary_key",
@@ -155,4 +173,4 @@ if __name__ == "__main__":
             paths_dict[current_key] = paths_dict.get(current_key, []) + [p]
 
     matches = file_matching(a.primary_key, **paths_dict)
-    write_file_matching(a.out_dir, matches, force=a.force)
+    write_file_matching(a.o, matches, force=a.force)
