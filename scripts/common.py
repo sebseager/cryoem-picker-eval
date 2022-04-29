@@ -189,3 +189,24 @@ def write_to_pickle(out_dir, obj, filename, rename_on_collision=True, force=Fals
         else:
             log(f"file already exists at {out_path}; skipping", lvl=1)
             return
+
+
+def linear_normalize(vals, new_min=0, new_max=1, always_norm=False):
+    """Ensure all numbers in vals fit between new_min and new_max. If the existing
+    range is within the new range and always_norm is False, do nothing. Otherwise,
+    linearly normalize values to new min and max.
+    """
+
+    vals = np.array(vals)
+    old_max, old_min = vals.max(), vals.min()
+    old_range, new_range = old_max - old_min, new_max - new_min
+    if always_norm or old_min < new_min or old_max > new_max:
+        if old_range == 0:
+            # if the old range was 0, arbitrarily set everything to new_min
+            return vals * 0 + new_min
+        else:
+            # otherwise do linear normalization
+            return (vals - old_min) * new_range / old_range + new_min
+
+    # otherwise do nothing
+    return vals

@@ -88,11 +88,13 @@ def write_file_matching(out_dir, matches, filename="file_matches.tsv", force=Fal
     log(f"wrote file matches to {out_path}")
 
 
-def read_boxfiles(file_matches, mrc_key="mrc"):
+def read_boxfiles(file_matches, mrc_key="mrc", norm_conf=None):
     """Provided lists of box file paths (must follow the EMAN box file format, with
     columns: x, y, width, height, confidence) as returned by file_matching, load all
     boxes into a dictionary of Box objects with the following structure:
     {picker_name: {mrc_path: [box1, box2, ...]}}.
+    If a (new_min, new_max) tuple is provided to norm_conf, forcibly normalize all
+    incoming confidences to that range.
     """
 
     boxes = {}
@@ -101,10 +103,10 @@ def read_boxfiles(file_matches, mrc_key="mrc"):
             continue
         boxes[name] = {}
         for mrc_path, boxfile_path in zip(file_matches[mrc_key], paths):
-            df = tsv_to_df(boxfile_path, header_mode="infer")
+            df = tsv_to_df(boxfile_path)
 
             # if df columns don't have names, infer column names
-            if all(df1.columns == range(len(df1.columns))):
+            if all(df.columns == range(len(df.columns))):
                 n_cols = len(df.columns)
                 if n_cols == 4:
                     df.columns = list(Box._fields[:-1])
@@ -118,12 +120,19 @@ def read_boxfiles(file_matches, mrc_key="mrc"):
                     df = df.drop(list(range(5, n_cols)), axis=1)
                     df.columns = list(Box._fields)
 
+            if len(df.columns) == 4:
+                df["conf"] = 0.0
+            if norm_conf:
+                df["conf"] = linear_normalize(df["conf"], *norm_conf, always_norm=True)
+
             try:
+
                 # Box._fields = ['x', 'y', 'w', 'h', 'conf']
                 new_boxes = [Box(*row) for row in df[list(Box._fields)].values]
             except KeyError as e:
                 log(f"box file does not have all required columns ({e})", lvl=2)
                 return
+
             try:
                 boxes[name][mrc_path].extend(new_boxes)
             except KeyError:

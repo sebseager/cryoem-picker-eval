@@ -265,12 +265,13 @@ if __name__ == "__main__":
         "picker1_w, picker1_h, picker1_conf, picker1_jac, ..."
     )
     parser.add_argument(
-        "out_dir",
-        help=f"Output directory (will be created if it doesn't exist)",
-    )
-    parser.add_argument(
         "file_matching_path",
         help=f"Path to file matching TSV",
+    )
+    parser.add_argument(
+        "-o",
+        help=f"Output directory (will be created if it doesn't exist)",
+        required=True,
     )
     parser.add_argument(
         "--methods",
@@ -326,9 +327,9 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     file_matches = read_file_matching(a.file_matching_path)
-    boxes = read_boxfiles(file_matches, mrc_key=a.mrc_key)
+    boxes = read_boxfiles(file_matches, mrc_key=a.mrc_key, norm_conf=a.conf_rng)
 
-    for method in set(a.methods):
+    for method in a.methods:
         log(f"starting calculations for method '{method}'")
         matching_func = locals()[method + "_matching"]
         table = jac_table(
@@ -342,7 +343,7 @@ if __name__ == "__main__":
             conf_range=a.conf_rng,
         )
         write_to_pickle(
-            a.out_dir,
+            a.o,
             table,
             f"{method}_matches.pickle",
             force=a.force,
