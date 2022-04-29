@@ -623,7 +623,7 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/general/run_submit_${i}.script
 #SBATCH -N1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --time=1-
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
@@ -657,7 +657,7 @@ cat << END > ${DATASET_HOME}/relion/deeppicker/refined/train_submit.script
 #SBATCH -N1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --time=5:00:00
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
@@ -709,7 +709,7 @@ for mrc_dir in ${DATASET_HOME}/relion/test_img_groups/group_*; do
 cat << END > ${DATASET_HOME}/relion/deeppicker/refined/run_submit_${i}.script
 #!/bin/bash
 #SBATCH --job-name=deeppicker_refined_${i}
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --time=1-
 #SBATCH -p pi_gerstein_gpu
 #SBATCH --gres=gpu:1
