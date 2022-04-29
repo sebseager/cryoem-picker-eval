@@ -293,14 +293,14 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/imppel/
 
 # convert general particles to box
 mkdir -p ${DATASET_HOME}/relion/cryolo/general/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/cryolo/general/STAR/*.star ${DATASET_HOME}/relion/cryolo/general/BOX -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/cryolo/general/STAR/*.star ${DATASET_HOME}/relion/cryolo/general/BOX -f star -t box -b ${EMAN_BOXSIZE_PIX} --force
 
 # score general model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/cryolo/general/BOX/*.box &> ${DATASET_HOME}/relion/cryolo/general/particle_set_comp.txt
 
 # convert refined particles to box
 mkdir -p ${DATASET_HOME}/relion/cryolo/refined/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/cryolo/refined/STAR/*.star ${DATASET_HOME}/relion/cryolo/refined/BOX -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/cryolo/refined/STAR/*.star ${DATASET_HOME}/relion/cryolo/refined/BOX -f star -t box -b ${EMAN_BOXSIZE_PIX} --force
 
 # score refined model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/cryolo/refined/BOX/*.box &> ${DATASET_HOME}/relion/cryolo/refined/particle_set_comp.txt
@@ -435,14 +435,14 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/imppel/
 
 # convert general model picks to individual box files
 mkdir -p ${DATASET_HOME}/relion/topaz/general/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/topaz/general/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/BOX/ -f tsv -t box -b ${EMAN_BOXSIZE_PIX} -c 1 2 none none 3 0 --header --multi_out
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/topaz/general/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/general/BOX/ -f tsv -t box -b ${EMAN_BOXSIZE_PIX} -c 1 2 none none 3 0 --multi_out
 
 # score general model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/topaz/general/BOX/*.box &> ${DATASET_HOME}/relion/topaz/general/particle_set_comp.txt
 
 # convert refined model picks to individual box files
 mkdir -p ${DATASET_HOME}/relion/topaz/refined/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/topaz/refined/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/refined/BOX/ -f tsv -t box -b ${EMAN_BOXSIZE_PIX} -c 1 2 none none 3 0 --header --multi_out
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/topaz/refined/predicted_particles_all_upsampled.txt ${DATASET_HOME}/relion/topaz/refined/BOX/ -f tsv -t box -b ${EMAN_BOXSIZE_PIX} -c 1 2 none none 3 0 --multi_out
 
 # score refined model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/topaz/refined/BOX/*.box &> ${DATASET_HOME}/relion/topaz/refined/particle_set_comp.txt
@@ -668,11 +668,11 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/deeppicker
 
 # collect training data
 cp -s ${DATASET_HOME}/relion/train_img/*.mrc ${DATASET_HOME}/relion/deeppicker/train/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/train_annot/*.box ${DATASET_HOME}/relion/deeppicker/train/ -f box -t star -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/train_annot/*.box ${DATASET_HOME}/relion/deeppicker/train/ -f box -t star -b ${EMAN_BOXSIZE_PIX} --force
 
 # collect validation data (eval in DeepPicker terminology)
 cp -s ${DATASET_HOME}/relion/val_img/*.mrc ${DATASET_HOME}/relion/deeppicker/val/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/val_annot/*.box ${DATASET_HOME}/relion/deeppicker/val/ -f box -t star -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/val_annot/*.box ${DATASET_HOME}/relion/deeppicker/val/ -f box -t star -b ${EMAN_BOXSIZE_PIX} --force
 
 # train model from scratch
 python ${PICKER_INSTALL_DIR}/deeppicker/train.py --train_type 1 --train_inputDir ${DATASET_HOME}/relion/deeppicker/train/ --particle_size ${EMAN_BOXSIZE_PIX} --coordinate_symbol "" --model_retrain --model_load_file ${PICKER_INSTALL_DIR}/deeppicker/trained_model/model_demo_type3 --model_save_dir ${DATASET_HOME}/relion/deeppicker/refined/ --model_save_file model_demo_type3_refined
@@ -732,14 +732,14 @@ Score model
 ```bash
 # convert general particles to box
 mkdir -p ${DATASET_HOME}/relion/deeppicker/general/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/deeppicker/general/STAR/*.star ${DATASET_HOME}/relion/deeppicker/general/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/deeppicker/general/STAR/*.star ${DATASET_HOME}/relion/deeppicker/general/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --force
 
 # score general model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/deeppicker/general/BOX/*.box &> ${DATASET_HOME}/relion/deeppicker/general/particle_set_comp.txt
 
 # convert refined particles to box
 mkdir -p ${DATASET_HOME}/relion/deeppicker/refined/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/deeppicker/refined/STAR/*.star ${DATASET_HOME}/relion/deeppicker/refined/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/deeppicker/refined/STAR/*.star ${DATASET_HOME}/relion/deeppicker/refined/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --force
 
 # score refined model
 python ${UTIL_SCRIPT_DIR}/score_detections.py -g ${DATASET_HOME}/relion/test_annot/*.box -p ${DATASET_HOME}/relion/deeppicker/refined/BOX/*.box &> ${DATASET_HOME}/relion/deeppicker/refined/particle_set_comp.txt
@@ -839,7 +839,7 @@ source ${CONDA_ACTIVATE} ${CONDA_ENVS}/imppel/
 
 # convert general predictions to box
 mkdir -p ${DATASET_HOME}/relion/parsed/BOX/
-python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/parsed/STAR/*_parsed.star ${DATASET_HOME}/relion/parsed/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --header --force
+python ${UTIL_SCRIPT_DIR}/coord_converter.py ${DATASET_HOME}/relion/parsed/STAR/*_parsed.star ${DATASET_HOME}/relion/parsed/BOX/ -f star -t box -b ${EMAN_BOXSIZE_PIX} --force
 rm -rf ${DATASET_HOME}/relion/parsed/STAR/
 
 # score general model
