@@ -110,10 +110,18 @@ if __name__ == "__main__":
         gt_boxes = list(gt_df.itertuples(name="Box", index=False))
         pckr_boxes = list(pckr_df.itertuples(name="Box", index=False))
 
-        score = segmentation_f1_score(
-            gt_boxes, pckr_boxes, conf_thresh=a.c, mrc_w=a.width, mrc_h=a.height
-        )
-        all_scores.append(score)
+        try:
+            score = segmentation_f1_score(
+                gt_boxes,
+                pckr_boxes,
+                conf_thresh=a.c,
+                mrc_w=a.width,
+                mrc_h=a.height,
+            )
+            all_scores.append(score)
+        except Exception as e:
+            tqdm.write(f"Error scoring {gt_path} and {pckr_path} ({e})")
+            continue
 
         if a.verbose:
             tqdm.write(f"Indiv. score ({match}): {score}")
