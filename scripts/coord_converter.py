@@ -415,7 +415,7 @@ if __name__ == "__main__":
         "-s",
         default="",
         type=str,
-        help="Suffix to append to generated output (default: _converted)",
+        help="Suffix to append to generated output (default: no suffix)",
     )
     parser.add_argument(
         "--header",
