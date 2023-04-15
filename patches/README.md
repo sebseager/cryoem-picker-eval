@@ -1,0 +1,1 @@
+In our testing, some particle pickers required minor modifications, as described in the [wiki](../../wiki/Picker-Modifications). These patch scripts are used in our install guides to help with reproducibility. 
