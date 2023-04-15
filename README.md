@@ -1,4 +1,4 @@
-# Cryo-EM Particle Picker Docs
+# Cryo-EM Particle Picker Evaluation
 
 ### Hello!
 
