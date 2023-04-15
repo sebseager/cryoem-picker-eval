@@ -11,3 +11,5 @@ To clone the most recent version of this repo, `cd` to a convenient directory an
 ```shell script
 git clone --depth 1 https://github.com/sebseager/cryoem-picker-eval.git && cd cryoem-picker-eval
 ```
+
+Please note that the `demo_data/` directory is a little over 330 MB. If this is an issue, please look into performing a [partial clone](https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone/).
