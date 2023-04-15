@@ -1,4 +1,5 @@
 import os
+import sys
 import pdb
 import math
 from glob import glob
@@ -21,6 +22,9 @@ matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 from matplotlib import gridspec as gs
 import seaborn as sns
+
+# imports from ../scripts directory
+sys.path.append(os.path.abspath(os.path.join("..", "scripts")))
 from coord_converter import star_to_df
 from common import log, read_mrc
 from common import *
