@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 import argparse
 from collections import namedtuple
-from common import linear_normalize
 
 
 # globals
@@ -28,6 +27,7 @@ STAR_HEADER_MAP = {
     "name": STAR_COL_N,
 }
 BOX_HEADER_MAP = {"x": 0, "y": 1, "w": 2, "h": 3, "conf": 4, "name": None}
+CBOX_HEADER_MAP = {"x": 0, "y": 1, "w": 3, "h": 4, "conf": 8, "name": None}
 TSV_HEADER_MAP = {"x": 0, "y": 1, "w": None, "h": None, "conf": 2, "name": None}
 
 AUTO = "auto"
@@ -65,6 +65,18 @@ def _is_int(x):
     except ValueError:
         return False
     return True
+
+
+def _is_float(num):  # 	CJC change
+    try:
+        float(num)
+        return True
+    except ValueError:
+        return False
+
+
+def _row_is_all_nonnumeric(x):  # 	CJC change
+    return all([not _is_float(val) for val in x.dropna()])
 
 
 def _has_numbers(s):
@@ -106,46 +118,65 @@ def star_to_df(path):
                     header[int(header_entry[1]) - 1] = header_entry[0].strip()
                 except ValueError:
                     _log("STAR file not properly formatted", lvl=2)
+                header_line_count = i + 1  # needed if empty STAR file
             elif header and _has_numbers(line):
                 header_line_count = i
                 break  # we've reached coordinate data
-
-    df = pd.read_csv(
-        path,
-        delim_whitespace=True,
-        header=None,
-        skip_blank_lines=True,
-        skiprows=header_line_count,
-    )
-
-    # rename columns according to STAR header
-    df = df.rename(columns={df.columns[k]: v for k, v in header.items()})
+    try:
+        df = pd.read_csv(
+            path,
+            delim_whitespace=True,
+            header=None,
+            skip_blank_lines=True,
+            skiprows=header_line_count,
+        )
+        # rename columns according to STAR header
+        df = df.rename(columns={df.columns[k]: v for k, v in header.items()})
+    except pd.errors.EmptyDataError:
+        df = pd.DataFrame(columns=[v for _, v in header.items()])
 
     return df
 
 
-def tsv_to_df(path):
+def tsv_to_df(path, header_mode=None):
     """Generate a dataframe from the TSV-like file at the specified path, skipping
     any non-numeric header rows.
 
     Args:
         path (str): Path to TSV-like file
+        header_mode (str): One of None, "infer" or an int (row index). If None, any
+            non-numeric rows at the top of the file are skipped and column names
+            are not set. Otherwise, manual column skipping is not performed, and
+            header_mode is passed directly to the header argument of pandas.read_csv.
     """
 
-    header_line_count = 0  # file line index where data starts
-    with open(path, mode="r") as f:
-        for i, line in enumerate(f):
-            if _has_numbers(line):
-                header_line_count = i
-                break
+    if header_mode is None:
+        header_line_count = 0  # file line index where data starts
+        with open(path, mode="r") as f:
+            for i, line in enumerate(f):
+                if (not line.startswith("_")) and _has_numbers(line):  # CJC change
+                    header_line_count = i
+                    break
+        try:
+            df = pd.read_csv(
+                path,
+                delim_whitespace=True,
+                header=None,
+                skip_blank_lines=True,
+                skiprows=header_line_count,
+            )
+        except pd.errors.EmptyDataError:
+            df = pd.DataFrame()
+    else:
+        df = pd.read_csv(
+            path,
+            delim_whitespace=True,
+            header=header_mode,
+            skip_blank_lines=True,
+        )
 
-    df = pd.read_csv(
-        path,
-        delim_whitespace=True,
-        header=None,
-        skip_blank_lines=True,
-        skiprows=header_line_count,
-    )
+    # 	drop rows that contain only NaNs and strings (ending CBOX lines) - CJC change
+    df = df[~df.apply(_row_is_all_nonnumeric, axis=1)]
 
     return df
 
@@ -222,7 +253,6 @@ def process_conversion(
     cols = {}
     for i, col in enumerate(DF_COL_NAMES):
         cols[col] = in_cols[i] if in_cols[i] != "none" else None
-
     # read input files into dataframes
     dfs = {}
 
@@ -233,6 +263,9 @@ def process_conversion(
         elif in_fmt == "box":
             default_cols = BOX_HEADER_MAP
             dfs = {p: tsv_to_df(p) for p in paths}
+        elif in_fmt == "cbox":  # 	CJC change
+            default_cols = CBOX_HEADER_MAP
+            dfs = {p: tsv_to_df(p).apply(pd.to_numeric) for p in paths}
         elif in_fmt == "tsv":
             default_cols = TSV_HEADER_MAP
             dfs = {p: tsv_to_df(p) for p in paths}
@@ -297,7 +330,18 @@ def process_conversion(
             _log(f"unexpected value in input columns ({e})", lvl=2)
 
         if norm_conf is not None and "conf" in df.columns:
-            df["conf"] = linear_normalize(df["conf"], *norm_conf)
+            old_max, old_min = df["conf"].max(), df["conf"].min()
+            new_min, new_max = norm_conf
+            old_range, new_range = old_max - old_min, new_max - new_min
+            if old_min <= new_min or old_max > new_max:
+                if old_range == 0:
+                    # if the old range was 0, arbitrarily set everything to new_min
+                    df["conf"] = new_min
+                else:
+                    # otherwise do linear normalization
+                    df["conf"] = (
+                        (df["conf"] - old_min) * new_range / old_range
+                    ) + new_min
 
         if require_conf is not None and "conf" not in df.columns:
             df["conf"] = float(require_conf)
@@ -322,7 +366,6 @@ def process_conversion(
     if out_dir is None:
         return out_dfs
 
-    out_dir = Path(out_dir).resolve()
     os.chdir(out_dir)
 
     for name, df in out_dfs.items():
@@ -376,7 +419,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-f",
-        choices=["star", "box", "tsv"],
+        choices=["star", "box", "cbox", "tsv"],  # 	CJC change
         help="Format FROM which to convert the input",
     )
     parser.add_argument(
@@ -476,9 +519,11 @@ if __name__ == "__main__":
         _log(f"cannot fulfill both single_out and multi_out flags", lvl=2)
 
     a.input = [Path(p).resolve() for p in np.atleast_1d(a.input)]
-
     if not all(p.is_file() for p in a.input):
         _log(f"bad input paths", lvl=2)
+
+    a.out_dir = Path(a.out_dir).resolve()
+    a.out_dir.mkdir(parents=True, exist_ok=True)
 
     process_conversion(
         paths=a.input,
