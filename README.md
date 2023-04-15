@@ -1,6 +1,6 @@
 # Cryo-EM Particle Picker Evaluation
 
-### :wave: Hello!
+### Hello!
 
 This repository (repo) contains installation guides, procedures, and patches for cryo-EM particle pickers, as followed during our experimentation for [TODO: add paper citation].
 
