@@ -4,7 +4,7 @@
 
 This repository (repo) contains installation guides, procedures, and patches for cryo-EM particle pickers, as followed during our experimentation for [TODO: FILL PAPER CITATION].
 
-#### Please refer first to our [wiki](../../wiki) for instructions on how to navigate and use this repo.
+**> Please begin by referring to the [wiki](../../wiki). <**
 
 To clone the most recent version of this repo, `cd` to a convenient directory and run the following. **Note that for all installation guides, the default assumption is that your current working directory is the root of the repo.**
 
