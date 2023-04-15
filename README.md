@@ -6,10 +6,8 @@ This repository (repo) contains installation guides, procedures, and patches for
 
 #### Please refer first to our [wiki](../../wiki) for instructions on how to navigate and use this repo.
 
-To clone the most recent version of this repo, `cd` to a convenient directory and run the following. **Note that for all installation guides, the default assumption is that your current working directory is `cryo-docs/`.**
+To clone the most recent version of this repo, `cd` to a convenient directory and run the following. **Note that for all installation guides, the default assumption is that your current working directory is the root of the repo.**
 
 ```shell script
-git clone --depth 1 https://github.com/sebseager/cryo-docs.git && cd cryo-docs
+git clone --depth 1 https://github.com/sebseager/cryoem-picker-eval.git && cd cryoem-picker-eval
 ```
-
-[TODO: clear all todos]
