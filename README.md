@@ -2,7 +2,7 @@
 
 ### Hello! :wave:
 
-This repository (repo) contains installation guides, procedures, and patches for cryo-EM particle pickers, as followed during our experimentation for [TODO: FILL PAPER CITATION].
+This repository (repo) contains installation guides, procedures, and patches for cryo-EM particle pickers, as followed during our experimentation for [TODO: add paper citation].
 
 **:point_right: Please begin by referring to the [wiki](../../wiki).**
 
